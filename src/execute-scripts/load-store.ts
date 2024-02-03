@@ -44,4 +44,7 @@ type ScriptParams = {
   }
 
   XLogger.debug("Files added to IndexedDB");
+
+  // Close tab finish import
+  window.close();
 })();

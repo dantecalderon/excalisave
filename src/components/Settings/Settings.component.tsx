@@ -17,9 +17,9 @@ import {
 } from "../../constants/message.types";
 import { IDrawing } from "../../interfaces/drawing.interface";
 import { XLogger } from "../../lib/logger";
+import { RandomUtils } from "../../lib/utils/random.utils";
 import { TabUtils } from "../../lib/utils/tab.utils";
 import { parseDataJSON } from "./helpers/import.helpers";
-import { RandomUtils } from "../../lib/utils/random.utils";
 
 const CalloutText = Callout.Text as any;
 
@@ -33,38 +33,21 @@ export function Settings() {
       return;
     }
 
-    if (!activeTab.url.startsWith("https://excalidraw.com")) {
-      XLogger.error("The active tab is not an excalidraw tab");
-      // TODO: Add notification
-
-      return;
-    }
+    const excalidrawTab = await browser.tabs.create({
+      url: "https://excalidraw.com",
+      index: activeTab.index + 1,
+      active: false,
+    });
 
     await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
+      target: { tabId: excalidrawTab.id },
       files: ["./js/execute-scripts/export-store.bundle.js"],
     });
   };
 
   const onImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    console.log("event", event);
     try {
-      const activeTab = await TabUtils.getActiveTab();
-
-      console.log("Active tab", activeTab);
-
-      if (!activeTab) {
-        XLogger.warn("No active tab found");
-
-        return;
-      }
-
-      if (!activeTab.url.startsWith("https://excalidraw.com")) {
-        XLogger.error("The active tab is not an excalidraw tab");
-        // TODO: Add notification
-
-        return;
-      }
-
       if (event.target?.files?.length !== 1) {
         console.error("File not selected");
 
@@ -122,10 +105,24 @@ export function Settings() {
 
           XLogger.debug("Files to import", files);
 
+          const activeTab = await TabUtils.getActiveTab();
+
+          if (!activeTab) {
+            XLogger.warn("No active tab found");
+
+            return;
+          }
+
+          const excalidrawTab = await browser.tabs.create({
+            url: "https://excalidraw.com",
+            index: activeTab.index + 1,
+            active: false,
+          });
+
           // This workaround is to pass params to script, it's ugly but it works
           await browser.scripting.executeScript({
             target: {
-              tabId: activeTab.id,
+              tabId: excalidrawTab.id,
             },
             func: (files) => {
               window.__SCRIPT_PARAMS__ = { files };
@@ -134,7 +131,7 @@ export function Settings() {
           });
 
           await browser.scripting.executeScript({
-            target: { tabId: activeTab.id },
+            target: { tabId: excalidrawTab.id },
             files: ["./js/execute-scripts/load-store.bundle.js"],
           });
 
@@ -191,6 +188,10 @@ export function Settings() {
           XLogger.debug("Finished importing drawings");
         } catch (error) {
           XLogger.error("Error while reading zip file", error);
+        } finally {
+          // After import reload, this is because can't import a second time
+          // TODO: Investigate why can't import a second time
+          window.location.reload();
         }
       };
 
