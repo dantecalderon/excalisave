@@ -1,4 +1,5 @@
 import {
+  ExternalLinkIcon,
   GearIcon,
   HeartIcon,
   ListBulletIcon,
@@ -8,6 +9,7 @@ import { Box, Flex, Text } from "@radix-ui/themes";
 import { clsx } from "clsx";
 import React from "react";
 import "./Sidebar.styles.scss";
+import { browser } from "webextension-polyfill-ts";
 
 type SidebarProps = {
   onChangeSelected?: (selected: string) => void;
@@ -111,7 +113,11 @@ export function Sidebar(props: SidebarProps) {
           as="div"
           weight={"medium"}
           size={"1"}
-          onClick={() => props.onChangeSelected?.("Settings")}
+          onClick={() => {
+            const runtimeUrl = browser.runtime.getURL("options.html");
+            console.log();
+            browser.tabs.create({ url: runtimeUrl });
+          }}
           className={clsx(
             "Sidebar__item",
             props.selected === "Settings" && "Sidebar__item--selected"
@@ -119,6 +125,11 @@ export function Sidebar(props: SidebarProps) {
         >
           <GearIcon width="18" height="18" />
           Settings
+          <ExternalLinkIcon
+            style={{ marginLeft: "4px" }}
+            width="14"
+            height="14"
+          />
         </Text>
       </Flex>
 
