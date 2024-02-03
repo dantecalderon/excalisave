@@ -39,6 +39,9 @@ export function Settings() {
       active: false,
     });
 
+    // Seems we need to wait a bit to avoid not executing the script
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
     await browser.scripting.executeScript({
       target: { tabId: excalidrawTab.id },
       files: ["./js/execute-scripts/export-store.bundle.js"],
@@ -118,6 +121,9 @@ export function Settings() {
             index: activeTab.index + 1,
             active: false,
           });
+
+          // Seems we need to wait a bit to avoid not executing the script
+          await new Promise((resolve) => setTimeout(resolve, 3000));
 
           // This workaround is to pass params to script, it's ugly but it works
           await browser.scripting.executeScript({
@@ -205,6 +211,7 @@ export function Settings() {
 
   useEffect(() => {
     browser.runtime.onMessage.addListener(async (message: ExportStore) => {
+      console.log("MEssage ", message);
       if (message.type === MessageType.EXPORT_STORE) {
         const result = await browser.storage.local.get();
 
