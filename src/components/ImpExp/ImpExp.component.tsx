@@ -23,7 +23,7 @@ import { parseDataJSON } from "./helpers/import.helpers";
 
 const CalloutText = Callout.Text as any;
 
-export function Settings() {
+export function ImpExp() {
   const onExportClick = async () => {
     const activeTab = await TabUtils.getActiveTab();
 
@@ -284,12 +284,7 @@ export function Settings() {
   }, []);
 
   return (
-    <Flex direction="column" p={"2"} gap={"3"}>
-      <Box>
-        <Text size={"4"} weight={"bold"}>
-          Settings
-        </Text>
-      </Box>
+    <Flex direction="column" gap={"3"}>
       <Box>
         <Callout.Root size="1" color="red" role="alergt">
           <Callout.Icon>

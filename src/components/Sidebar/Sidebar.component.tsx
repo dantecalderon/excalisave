@@ -10,6 +10,7 @@ import { clsx } from "clsx";
 import React from "react";
 import "./Sidebar.styles.scss";
 import { browser } from "webextension-polyfill-ts";
+import { TabUtils } from "../../lib/utils/tab.utils";
 
 type SidebarProps = {
   onChangeSelected?: (selected: string) => void;
@@ -113,10 +114,14 @@ export function Sidebar(props: SidebarProps) {
           as="div"
           weight={"medium"}
           size={"1"}
-          onClick={() => {
+          onClick={async () => {
+            const activeTab = await TabUtils.getActiveTab();
             const runtimeUrl = browser.runtime.getURL("options.html");
-            console.log();
-            browser.tabs.create({ url: runtimeUrl });
+            browser.tabs.create({
+              url: runtimeUrl,
+              openerTabId: activeTab?.id,
+              index: activeTab ? activeTab.index + 1 : undefined,
+            });
           }}
           className={clsx(
             "Sidebar__item",
