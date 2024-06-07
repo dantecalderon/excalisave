@@ -44,6 +44,7 @@ import {
   DrawingVirtualizedWrapper,
 } from "../components/Drawing/DrawingVirualizedWrapper.component";
 import { SORT_BY_OPTIONS, SortByEnum } from "../lib/constants";
+import { Folder } from "../interfaces/folder.interface";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -241,8 +242,6 @@ const Popup: React.FC = () => {
 
       setCurrentDrawingId(loadDrawingId);
       setIsLiveCollaboration(false);
-      // TODO: Activate this to avoid fast switching errors(or block switching for a few milis)
-      // window.close();
     }
   };
 
@@ -262,14 +261,6 @@ const Popup: React.FC = () => {
     window.close();
   };
 
-  const handleAddToFavorites = async (drawingId: string) => {
-    await addToFavorites(drawingId);
-  };
-
-  const handleRemoveFromFavorites = async (drawingId: string) => {
-    await removeFromFavorites(drawingId);
-  };
-
   const currentDrawing = drawings.find(
     (drawing) => drawing.id === currentDrawingId
   );
@@ -285,7 +276,7 @@ const Popup: React.FC = () => {
     }
   };
 
-  const filterDrawings = () => {
+  const filterDrawings = (drawings: IDrawing[], folders: Folder[]) => {
     if (sidebarSelected?.startsWith("folder:")) {
       const folder = folders.find((folder) => folder.id === sidebarSelected);
 
@@ -316,7 +307,18 @@ const Popup: React.FC = () => {
     }
   };
 
-  const filteredDrawings = filterDrawings();
+  let filteredDrawings = filterDrawings(drawings, folders);
+
+  // filteredDrawings = filteredDrawings.sort((a, b) => {
+  //   // sort by createdAt
+  //   if (sortBy === SortByEnum.LastCreated) {
+  //     return new Date(a.createdAt).getDate() - new Date(b.createdAt).getDate();
+  //   } else if (sortBy === SortByEnum.Alphabetically) {
+  //     return a.name.localeCompare(b.name);
+  //   } else {
+  //     return -1;
+  //   }
+  // });
 
   const showDrawings = (drawingData: DrawingVirtualizedData) => {
     return (
@@ -343,7 +345,8 @@ const Popup: React.FC = () => {
     inExcalidrawPage,
     onClick: handleLoadItemWithConfirm,
     onRenameDrawing: onRenameDrawing,
-    onAddToFavorites: handleAddToFavorites,
+    onAddToFavorites: addToFavorites,
+    onRemoveFromFavorites: removeFromFavorites,
     onDeleteDrawing: onDeleteDrawing,
     onAddToFolder: addDrawingToFolder,
     onRemoveFromFolder: removeDrawingFromFolder,
