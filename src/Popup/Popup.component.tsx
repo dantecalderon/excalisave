@@ -1,11 +1,13 @@
 import {
   BookmarkIcon,
+  CaretSortIcon,
   Cross1Icon,
   CrossCircledIcon,
   ExclamationTriangleIcon,
   HeartFilledIcon,
   InfoCircledIcon,
   MagnifyingGlassIcon,
+  SunIcon,
 } from "@radix-ui/react-icons";
 import {
   Button,
@@ -17,6 +19,7 @@ import {
   Text,
   TextField,
   Theme,
+  Select,
 } from "@radix-ui/themes";
 import React, { useEffect, useRef, useState } from "react";
 import { browser } from "webextension-polyfill-ts";
@@ -40,6 +43,7 @@ import {
   DrawingVirtualizedData,
   DrawingVirtualizedWrapper,
 } from "../components/Drawing/DrawingVirualizedWrapper.component";
+import { SORT_BY_OPTIONS, SortByEnum } from "../lib/constants";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -69,6 +73,7 @@ const Popup: React.FC = () => {
   const [sidebarSelected, setSidebarSelected] = useState("");
   const { getRestorePoint, setRestorePoint } = useRestorePoint();
   const { loading, startLoading } = useDrawingLoading();
+  const [sortBy, setSortBy] = useState<SortByEnum>(SortByEnum.LastUpdated);
   const [isConfirmSwitchDialogOpen, setIsConfirmSwitchDialogOpen] =
     useState<boolean>(false);
 
@@ -321,7 +326,7 @@ const Popup: React.FC = () => {
         columnWidth={200}
         rowHeight={170}
         width={400}
-        height={440}
+        height={404}
         itemData={drawingData}
       >
         {DrawingVirtualizedWrapper}
@@ -414,7 +419,30 @@ const Popup: React.FC = () => {
             onRenameFolder={renameFolder}
             onChangeSelected={(selected) => setSidebarSelected(selected)}
           />
+
           <div className="Popup__content">
+            <div style={{ textAlign: "right", padding: "6px 14px" }}>
+              <Select.Root
+                size={"1"}
+                value={sortBy}
+                onValueChange={(newValue: SortByEnum) => {
+                  setSortBy(newValue);
+                }}
+              >
+                <Select.Trigger />
+                <Select.Content position="popper">
+                  <Select.Item value={SortByEnum.LastUpdated}>
+                    Last Updated
+                  </Select.Item>
+                  <Select.Item value={SortByEnum.LastCreated}>
+                    Last Created
+                  </Select.Item>
+                  <Select.Item value={SortByEnum.Alphabetically}>
+                    Alphabetically
+                  </Select.Item>
+                </Select.Content>
+              </Select.Root>
+            </div>
             {sidebarSelected === "Favorites" &&
               (filteredDrawings.length >= 1 ? (
                 showDrawings(drawingData)
