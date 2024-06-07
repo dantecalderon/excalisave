@@ -5,14 +5,14 @@ export const MAX_HEIGHT_THUMBNAIL = Math.round(130 * 1.5);
 export const DRAWING_ID_KEY_LS = "__drawing_id";
 
 export enum SortByEnum {
-  LastUpdated = "lastUpdated",
+  LastModified = "lastModified",
   LastCreated = "lastCreated",
   Alphabetically = "alphabetically",
 }
 
 export const SORT_BY_OPTIONS: Record<SortByEnum, { label: string }> = {
-  [SortByEnum.LastUpdated]: {
-    label: "Last Updated",
+  [SortByEnum.LastModified]: {
+    label: "Last Modified",
   },
   [SortByEnum.LastCreated]: {
     label: "Last Created",

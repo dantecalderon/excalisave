@@ -74,7 +74,7 @@ const Popup: React.FC = () => {
   const [sidebarSelected, setSidebarSelected] = useState("");
   const { getRestorePoint, setRestorePoint } = useRestorePoint();
   const { loading, startLoading } = useDrawingLoading();
-  const [sortBy, setSortBy] = useState<SortByEnum>(SortByEnum.LastUpdated);
+  const [sortBy, setSortBy] = useState<SortByEnum>(SortByEnum.LastModified);
   const [isConfirmSwitchDialogOpen, setIsConfirmSwitchDialogOpen] =
     useState<boolean>(false);
 
@@ -277,6 +277,8 @@ const Popup: React.FC = () => {
   };
 
   const filterDrawings = (drawings: IDrawing[], folders: Folder[]) => {
+    let filteredDrawings = drawings;
+
     if (sidebarSelected?.startsWith("folder:")) {
       const folder = folders.find((folder) => folder.id === sidebarSelected);
 
@@ -284,43 +286,49 @@ const Popup: React.FC = () => {
         return [];
       }
 
-      return drawings.filter((drawing) => {
+      filteredDrawings = drawings.filter((drawing) => {
         return folder.drawingIds.includes(drawing.id);
       });
+    } else {
+      switch (sidebarSelected) {
+        case "Favorites":
+          filteredDrawings = drawings.filter((drawing) => {
+            return favorites.includes(drawing.id);
+          });
+          break;
+        case "Results":
+          filteredDrawings = drawings.filter((drawing) => {
+            return (
+              drawing.name &&
+              drawing.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+          });
+          break;
+        default:
+          filteredDrawings = drawings;
+          break;
+      }
     }
 
-    switch (sidebarSelected) {
-      case "Favorites":
-        return drawings.filter((drawing) => {
-          return favorites.includes(drawing.id);
-        });
-      case "Results":
-        return drawings.filter((drawing) => {
-          // TODO: Fix this, this is not enecssary
-          return (
-            drawing.name &&
-            drawing.name.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-        });
-      default:
-        return drawings;
-    }
+    return filteredDrawings.sort((a, b) => {
+      if (sortBy === SortByEnum.LastCreated) {
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      } else if (sortBy === SortByEnum.Alphabetically) {
+        return a.name.localeCompare(b.name);
+      }
+
+      return 0;
+    });
   };
 
-  let filteredDrawings = filterDrawings(drawings, folders);
+  const filteredDrawings = filterDrawings(drawings, folders);
 
-  // filteredDrawings = filteredDrawings.sort((a, b) => {
-  //   // sort by createdAt
-  //   if (sortBy === SortByEnum.LastCreated) {
-  //     return new Date(a.createdAt).getDate() - new Date(b.createdAt).getDate();
-  //   } else if (sortBy === SortByEnum.Alphabetically) {
-  //     return a.name.localeCompare(b.name);
-  //   } else {
-  //     return -1;
-  //   }
-  // });
-
-  const showDrawings = (drawingData: DrawingVirtualizedData) => {
+  const showDrawings = (
+    drawingData: DrawingVirtualizedData,
+    viewKey: string
+  ) => {
     return (
       <Grid
         columnCount={2}
@@ -330,6 +338,9 @@ const Popup: React.FC = () => {
         width={400}
         height={404}
         itemData={drawingData}
+        itemKey={({ columnIndex, rowIndex }) => {
+          return viewKey + drawingData.drawings[rowIndex * 2 + columnIndex].id;
+        }}
       >
         {DrawingVirtualizedWrapper}
       </Grid>
@@ -389,7 +400,6 @@ const Popup: React.FC = () => {
                 }}
                 placeholder="Search Drawing"
               />
-
               <TextField.Slot>
                 {searchTerm && (
                   <IconButton
@@ -433,9 +443,9 @@ const Popup: React.FC = () => {
                 }}
               >
                 <Select.Trigger />
-                <Select.Content position="popper">
-                  <Select.Item value={SortByEnum.LastUpdated}>
-                    Last Updated
+                <Select.Content>
+                  <Select.Item value={SortByEnum.LastModified}>
+                    Last Modified
                   </Select.Item>
                   <Select.Item value={SortByEnum.LastCreated}>
                     Last Created
@@ -448,7 +458,7 @@ const Popup: React.FC = () => {
             </div>
             {sidebarSelected === "Favorites" &&
               (filteredDrawings.length >= 1 ? (
-                showDrawings(drawingData)
+                showDrawings(drawingData, sidebarSelected)
               ) : (
                 <Placeholder
                   icon={<HeartFilledIcon width={"30"} height={"30"} />}
@@ -463,7 +473,7 @@ const Popup: React.FC = () => {
             {sidebarSelected === "Results" &&
               (searchTerm !== "" ? (
                 filteredDrawings.length >= 1 ? (
-                  showDrawings(drawingData)
+                  showDrawings(drawingData, "Results")
                 ) : (
                   <Placeholder
                     icon={<MagnifyingGlassIcon width={"30"} height={"30"} />}
@@ -481,7 +491,7 @@ const Popup: React.FC = () => {
 
             {(sidebarSelected === "All" || sidebarSelected === "") &&
               (filteredDrawings.length > 0 ? (
-                showDrawings(drawingData)
+                showDrawings(drawingData, "All")
               ) : (
                 <Placeholder
                   icon={<BookmarkIcon width={"30"} height={"30"} />}
@@ -499,7 +509,7 @@ const Popup: React.FC = () => {
 
             {sidebarSelected.startsWith("folder:") &&
               (filteredDrawings.length > 0 ? (
-                showDrawings(drawingData)
+                showDrawings(drawingData, sidebarSelected)
               ) : (
                 <Placeholder
                   icon={<Cross1Icon width={"30"} height={"30"} />}
