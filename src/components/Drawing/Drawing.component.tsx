@@ -18,6 +18,10 @@ import { Folder } from "../../interfaces/folder.interface";
 const DialogDescription = Dialog.Description as any;
 
 export type DrawingProps = {
+  // In Grid position
+  isLeft?: boolean;
+  isRight?: boolean;
+
   favorite?: boolean;
   isCurrent: boolean;
   inExcalidrawPage: boolean;
@@ -53,7 +57,13 @@ export function Drawing(props: DrawingProps) {
   };
 
   return (
-    <Box className="Drawing">
+    <Box
+      className="Drawing"
+      style={{
+        paddingLeft: props.isLeft ? "6px" : "0",
+        paddingRight: props.isRight ? "6px" : "0",
+      }}
+    >
       <Flex direction="column" gap="2" position={"relative"}>
         <img
           className="Drawing__image"

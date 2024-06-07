@@ -318,9 +318,9 @@ const Popup: React.FC = () => {
       <Grid
         columnCount={2}
         rowCount={drawingData.drawings.length / 2}
-        columnWidth={195}
+        columnWidth={200}
         rowHeight={170}
-        width={390}
+        width={400}
         height={440}
         itemData={drawingData}
       >

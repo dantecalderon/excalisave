@@ -27,8 +27,7 @@ button,
   &__content {
     height: 100%;
     width: calc(100% - 200px);
+    // padding-top: 20px;
     overflow-y: scroll;
-    padding-left: 8px;
-    padding-right: 10px;
   }
 }

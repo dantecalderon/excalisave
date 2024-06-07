@@ -35,6 +35,8 @@ export function DrawingVirtualizedWrapper({
     <div style={style as React.CSSProperties}>
       <Drawing
         key={drawing.id}
+        isLeft={columnIndex % 2 === 0}
+        isRight={columnIndex % 2 === 1}
         drawing={drawing}
         folders={data.folders}
         folderIdSelected={
