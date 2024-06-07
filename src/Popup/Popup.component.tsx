@@ -12,7 +12,6 @@ import {
   Callout,
   Dialog,
   Flex,
-  Grid,
   IconButton,
   Strong,
   Text,
@@ -36,6 +35,11 @@ import { useRestorePoint } from "./hooks/useRestorePoint.hook";
 import { useFolders } from "./hooks/useFolders.hook";
 import "./Popup.styles.scss";
 import { CleanupFilesMessage, MessageType } from "../constants/message.types";
+import { FixedSizeGrid as Grid } from "react-window";
+import {
+  DrawingVirtualizedData,
+  DrawingVirtualizedWrapper,
+} from "../components/Drawing/DrawingVirualizedWrapper.component";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -309,34 +313,35 @@ const Popup: React.FC = () => {
 
   const filteredDrawings = filterDrawings();
 
-  const showDrawings = () => {
+  const showDrawings = (drawingData: DrawingVirtualizedData) => {
     return (
-      <Grid columns="2" gapX="3" gapY="5" width="auto" pb="3" pt="3">
-        {filteredDrawings.map((drawing, index) => (
-          <Drawing
-            key={drawing.id}
-            index={index}
-            drawing={drawing}
-            folders={folders}
-            folderIdSelected={
-              sidebarSelected.startsWith("folder:")
-                ? sidebarSelected
-                : undefined
-            }
-            inExcalidrawPage={inExcalidrawPage}
-            favorite={favorites.includes(drawing.id)}
-            onClick={handleLoadItemWithConfirm}
-            isCurrent={currentDrawingId === drawing.id}
-            onRenameDrawing={onRenameDrawing}
-            onAddToFavorites={handleAddToFavorites}
-            onRemoveFromFavorites={handleRemoveFromFavorites}
-            onDeleteDrawing={onDeleteDrawing}
-            onAddToFolder={addDrawingToFolder}
-            onRemoveFromFolder={removeDrawingFromFolder}
-          />
-        ))}
+      <Grid
+        columnCount={2}
+        rowCount={drawingData.drawings.length / 2}
+        columnWidth={195}
+        rowHeight={170}
+        width={390}
+        height={440}
+        itemData={drawingData}
+      >
+        {DrawingVirtualizedWrapper}
       </Grid>
     );
+  };
+
+  const drawingData: DrawingVirtualizedData = {
+    drawings: filteredDrawings,
+    folders,
+    favorites,
+    sidebarSelected,
+    currentDrawingId,
+    inExcalidrawPage,
+    onClick: handleLoadItemWithConfirm,
+    onRenameDrawing: onRenameDrawing,
+    onAddToFavorites: handleAddToFavorites,
+    onDeleteDrawing: onDeleteDrawing,
+    onAddToFolder: addDrawingToFolder,
+    onRemoveFromFolder: removeDrawingFromFolder,
   };
 
   return (
@@ -412,7 +417,7 @@ const Popup: React.FC = () => {
           <div className="Popup__content">
             {sidebarSelected === "Favorites" &&
               (filteredDrawings.length >= 1 ? (
-                showDrawings()
+                showDrawings(drawingData)
               ) : (
                 <Placeholder
                   icon={<HeartFilledIcon width={"30"} height={"30"} />}
@@ -427,7 +432,7 @@ const Popup: React.FC = () => {
             {sidebarSelected === "Results" &&
               (searchTerm !== "" ? (
                 filteredDrawings.length >= 1 ? (
-                  showDrawings()
+                  showDrawings(drawingData)
                 ) : (
                   <Placeholder
                     icon={<MagnifyingGlassIcon width={"30"} height={"30"} />}
@@ -445,7 +450,7 @@ const Popup: React.FC = () => {
 
             {(sidebarSelected === "All" || sidebarSelected === "") &&
               (filteredDrawings.length > 0 ? (
-                showDrawings()
+                showDrawings(drawingData)
               ) : (
                 <Placeholder
                   icon={<BookmarkIcon width={"30"} height={"30"} />}
@@ -463,7 +468,7 @@ const Popup: React.FC = () => {
 
             {sidebarSelected.startsWith("folder:") &&
               (filteredDrawings.length > 0 ? (
-                showDrawings()
+                showDrawings(drawingData)
               ) : (
                 <Placeholder
                   icon={<Cross1Icon width={"30"} height={"30"} />}
