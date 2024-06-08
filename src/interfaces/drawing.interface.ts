@@ -1,3 +1,5 @@
+import { JSONString } from "../lib/types.utils";
+
 /**
  * Drawing interface
  *
@@ -11,8 +13,8 @@ export interface IDrawing {
   imageBase64?: string;
   viewBackgroundColor?: string;
   data: {
-    excalidraw: string;
-    excalidrawState: string;
+    excalidraw: JSONString;
+    excalidrawState: JSONString;
     versionFiles: string;
     versionDataState: string;
   };

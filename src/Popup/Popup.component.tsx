@@ -29,8 +29,10 @@ import { useFolders } from "./hooks/useFolders.hook";
 import { useRestorePoint } from "./hooks/useRestorePoint.hook";
 import { useSidebarSelected } from "./hooks/useSidebarSelected.hook";
 import { checkCleanOutdatedFiles } from "./utils/chek-clean-outdated-files.util";
+import { filterAndSortDrawings } from "./utils/filter-and-sort-drawings.util";
 
 const Popup: React.FC = () => {
+  const { getRestorePoint, setRestorePoint } = useRestorePoint();
   const { favorites, addToFavorites, removeFromFavorites } = useFavorites();
   const {
     folders,
@@ -41,7 +43,7 @@ const Popup: React.FC = () => {
     removeDrawingFromFolder,
     removeDrawingFromAllFolders,
   } = useFolders();
-  const [searchTerm, setSearchTerm] = React.useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const {
     currentDrawingId,
     inExcalidrawPage,
@@ -52,7 +54,6 @@ const Popup: React.FC = () => {
   const drawingIdToSwitch = useRef<string | undefined>(undefined);
   const { sidebarSelected, setSidebarSelected, selectedTab } =
     useSidebarSelected();
-  const { getRestorePoint, setRestorePoint } = useRestorePoint();
   const { loading, startLoading } = useDrawingLoading();
   const [sortBy, setSortBy] = useState<SortByEnum>(SortByEnum.LastModified);
   const [isConfirmSwitchDialogOpen, setIsConfirmSwitchDialogOpen] =
@@ -134,62 +135,22 @@ const Popup: React.FC = () => {
     }
   };
 
-  const filterDrawings = (drawings: IDrawing[], folders: Folder[]) => {
-    let filteredDrawings = drawings;
-
-    if (sidebarSelected?.startsWith("folder:")) {
-      const folder = folders.find((folder) => folder.id === sidebarSelected);
-
-      if (!folder) {
-        return [];
-      }
-
-      filteredDrawings = drawings.filter((drawing) => {
-        return folder.drawingIds.includes(drawing.id);
-      });
-    } else {
-      switch (sidebarSelected) {
-        case "Favorites":
-          filteredDrawings = drawings.filter((drawing) => {
-            return favorites.includes(drawing.id);
-          });
-          break;
-        case "Results":
-          filteredDrawings = drawings.filter((drawing) => {
-            return (
-              drawing.name &&
-              drawing.name.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-          });
-          break;
-        default:
-          filteredDrawings = drawings;
-          break;
-      }
-    }
-
-    const result = filteredDrawings.sort((a, b) => {
-      if (sortBy === SortByEnum.LastCreated) {
-        return (
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-      } else if (sortBy === SortByEnum.Alphabetically) {
-        return a.name.localeCompare(b.name);
-      } else if (sortBy === SortByEnum.LastModified) {
-        if (a.updatedAt && b.updatedAt) {
-          return (
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-          );
-        } else if (a.updatedAt) {
-          return -1;
-        } else if (b.updatedAt) {
-          return 1;
-        }
-        return 0;
-      }
-
-      return 0;
-    });
+  const filterDrawings = (
+    drawings: IDrawing[],
+    folders: Folder[],
+    favorites: string[],
+    searchTerm: string,
+    sortBy: SortByEnum,
+    sidebarSelected: string
+  ) => {
+    const result = filterAndSortDrawings(
+      drawings,
+      folders,
+      favorites,
+      searchTerm,
+      sortBy,
+      sidebarSelected
+    );
 
     setRestorePoint({
       drawings: result.slice(0, 6),
@@ -203,7 +164,14 @@ const Popup: React.FC = () => {
 
   const filteredDrawings = isLoadingDrawings
     ? drawingsFromRestore
-    : filterDrawings(drawings, folders);
+    : filterDrawings(
+        drawings,
+        folders,
+        favorites,
+        searchTerm,
+        sortBy,
+        sidebarSelected
+      );
 
   const drawingData: DrawingVirtualizedData = {
     drawings: filteredDrawings,
