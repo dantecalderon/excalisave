@@ -357,65 +357,67 @@ const Popup: React.FC = () => {
               </Select.Root>
             </div>
             {sidebarSelected === "Favorites" &&
-              (filteredDrawings.length >= 1 ? (
-                showDrawings(drawingData, sidebarSelected)
-              ) : (
-                <Placeholder
-                  icon={<HeartFilledIcon width={"30"} height={"30"} />}
-                  message={
-                    <Text size={"2"}>
-                      Your favorite drawings will appear here
-                    </Text>
-                  }
-                />
-              ))}
+              (filteredDrawings.length >= 1
+                ? showDrawings(drawingData, sidebarSelected)
+                : !isLoadingDrawings && (
+                    <Placeholder
+                      icon={<HeartFilledIcon width={"30"} height={"30"} />}
+                      message={
+                        <Text size={"2"}>
+                          Your favorite drawings will appear here
+                        </Text>
+                      }
+                    />
+                  ))}
 
             {sidebarSelected === "Results" &&
-              (searchTerm !== "" ? (
-                filteredDrawings.length >= 1 ? (
-                  showDrawings(drawingData, "Results")
-                ) : (
-                  <Placeholder
-                    icon={<MagnifyingGlassIcon width={"30"} height={"30"} />}
-                    message={
-                      <Text size={"2"}>No items found for "{searchTerm}"</Text>
-                    }
-                  />
-                )
-              ) : (
-                <Placeholder
-                  icon={<MagnifyingGlassIcon width={"30"} height={"30"} />}
-                  message={<Text size={"2"}>Search for something</Text>}
-                />
-              ))}
+              (searchTerm !== ""
+                ? filteredDrawings.length >= 1
+                  ? showDrawings(drawingData, "Results")
+                  : !isLoadingDrawings && (
+                      <Placeholder
+                        icon={
+                          <MagnifyingGlassIcon width={"30"} height={"30"} />
+                        }
+                        message={
+                          <Text size={"2"}>
+                            No items found for "{searchTerm}"
+                          </Text>
+                        }
+                      />
+                    )
+                : !isLoadingDrawings && (
+                    <Placeholder
+                      icon={<MagnifyingGlassIcon width={"30"} height={"30"} />}
+                      message={<Text size={"2"}>Search for something</Text>}
+                    />
+                  ))}
 
             {(sidebarSelected === "All" || sidebarSelected === "") &&
-              (filteredDrawings.length > 0 ? (
-                showDrawings(drawingData, "All")
-              ) : (
-                <Placeholder
-                  icon={<BookmarkIcon width={"30"} height={"30"} />}
-                  message={
-                    <Text size={"2"}>
-                      You don't have saved drawings yet. <br />
-                      Start saving one by clicking on the <Strong>
-                        Save
-                      </Strong>{" "}
-                      button.
-                    </Text>
-                  }
-                />
-              ))}
+              (filteredDrawings.length > 0
+                ? showDrawings(drawingData, "All")
+                : !isLoadingDrawings && (
+                    <Placeholder
+                      icon={<BookmarkIcon width={"30"} height={"30"} />}
+                      message={
+                        <Text size={"2"}>
+                          You don't have saved drawings yet. <br />
+                          Start saving one by clicking on the{" "}
+                          <Strong>Save</Strong> button.
+                        </Text>
+                      }
+                    />
+                  ))}
 
             {sidebarSelected.startsWith("folder:") &&
-              (filteredDrawings.length > 0 ? (
-                showDrawings(drawingData, sidebarSelected)
-              ) : (
-                <Placeholder
-                  icon={<Cross1Icon width={"30"} height={"30"} />}
-                  message={<Text size={"2"}>Collection is empty.</Text>}
-                />
-              ))}
+              (filteredDrawings.length > 0
+                ? showDrawings(drawingData, sidebarSelected)
+                : !isLoadingDrawings && (
+                    <Placeholder
+                      icon={<Cross1Icon width={"30"} height={"30"} />}
+                      message={<Text size={"2"}>Collection is empty.</Text>}
+                    />
+                  ))}
           </div>
         </Flex>
 
