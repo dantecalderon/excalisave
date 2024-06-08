@@ -1,13 +1,11 @@
 import {
   BookmarkIcon,
-  CaretSortIcon,
   Cross1Icon,
   CrossCircledIcon,
   ExclamationTriangleIcon,
   HeartFilledIcon,
   InfoCircledIcon,
   MagnifyingGlassIcon,
-  SunIcon,
 } from "@radix-ui/react-icons";
 import {
   Button,
@@ -15,36 +13,35 @@ import {
   Dialog,
   Flex,
   IconButton,
+  Select,
   Strong,
   Text,
   TextField,
   Theme,
-  Select,
 } from "@radix-ui/themes";
 import React, { useEffect, useRef, useState } from "react";
-import { browser } from "webextension-polyfill-ts";
-import { Drawing } from "../components/Drawing/Drawing.component";
-import { NavBar } from "../components/NavBar/Navbar.component";
-import { Placeholder } from "../components/Placeholder/Placeholder.component";
-import { Sidebar } from "../components/Sidebar/Sidebar.component";
-import { IDrawing } from "../interfaces/drawing.interface";
-import { DrawingStore } from "../lib/drawing-store";
-import { XLogger } from "../lib/logger";
-import { TabUtils } from "../lib/utils/tab.utils";
-import { useCurrentDrawingId } from "./hooks/useCurrentDrawing.hook";
-import { useDrawingLoading } from "./hooks/useDrawingLoading.hook";
-import { useFavorites } from "./hooks/useFavorites.hook";
-import { useRestorePoint } from "./hooks/useRestorePoint.hook";
-import { useFolders } from "./hooks/useFolders.hook";
-import "./Popup.styles.scss";
-import { CleanupFilesMessage, MessageType } from "../constants/message.types";
 import { FixedSizeGrid as Grid } from "react-window";
+import { browser } from "webextension-polyfill-ts";
 import {
   DrawingVirtualizedData,
   DrawingVirtualizedWrapper,
 } from "../components/Drawing/DrawingVirualizedWrapper.component";
-import { SORT_BY_OPTIONS, SortByEnum } from "../lib/constants";
+import { NavBar } from "../components/NavBar/Navbar.component";
+import { Placeholder } from "../components/Placeholder/Placeholder.component";
+import { Sidebar } from "../components/Sidebar/Sidebar.component";
+import { CleanupFilesMessage, MessageType } from "../constants/message.types";
+import { IDrawing } from "../interfaces/drawing.interface";
 import { Folder } from "../interfaces/folder.interface";
+import { SORT_BY_OPTIONS, SortByEnum } from "../lib/constants";
+import { DrawingStore } from "../lib/drawing-store";
+import { XLogger } from "../lib/logger";
+import { TabUtils } from "../lib/utils/tab.utils";
+import "./Popup.styles.scss";
+import { useCurrentDrawingId } from "./hooks/useCurrentDrawing.hook";
+import { useDrawingLoading } from "./hooks/useDrawingLoading.hook";
+import { useFavorites } from "./hooks/useFavorites.hook";
+import { useFolders } from "./hooks/useFolders.hook";
+import { useRestorePoint } from "./hooks/useRestorePoint.hook";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -83,6 +80,13 @@ const Popup: React.FC = () => {
       .then((restorePoint) => {
         if (restorePoint?.searchTerm) {
           setSearchTerm(restorePoint.searchTerm);
+        }
+
+        if (
+          restorePoint?.sortBy &&
+          SORT_BY_OPTIONS[restorePoint.sortBy as SortByEnum]
+        ) {
+          setSortBy(restorePoint.sortBy as SortByEnum);
         }
 
         setSidebarSelected(restorePoint?.sidebarSelected || "All");
@@ -178,8 +182,9 @@ const Popup: React.FC = () => {
     setRestorePoint({
       searchTerm,
       sidebarSelected: sidebarSelected || "All",
+      sortBy,
     });
-  }, [searchTerm, sidebarSelected]);
+  }, [searchTerm, sidebarSelected, sortBy]);
 
   const onRenameDrawing = async (id: string, newName: string) => {
     try {
