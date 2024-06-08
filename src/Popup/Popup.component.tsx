@@ -1,25 +1,14 @@
+import "./Popup.styles.scss";
+
 import {
   BookmarkIcon,
   Cross1Icon,
-  CrossCircledIcon,
   HeartFilledIcon,
   MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
-import {
-  Flex,
-  IconButton,
-  Select,
-  Strong,
-  Text,
-  TextField,
-  Theme,
-} from "@radix-ui/themes";
+import { Flex, Select, Strong, Tabs, Text, Theme } from "@radix-ui/themes";
 import React, { useEffect, useRef, useState } from "react";
-import { FixedSizeGrid as Grid } from "react-window";
-import {
-  DrawingVirtualizedData,
-  DrawingVirtualizedWrapper,
-} from "../components/Drawing/DrawingVirualizedWrapper.component";
+import { DrawingVirtualizedData } from "../components/Drawing/DrawingVirualizedWrapper.component";
 import { NavBar } from "../components/NavBar/Navbar.component";
 import { Placeholder } from "../components/Placeholder/Placeholder.component";
 import { Sidebar } from "../components/Sidebar/Sidebar.component";
@@ -29,14 +18,16 @@ import { SORT_BY_OPTIONS, SortByEnum } from "../lib/constants";
 import { DrawingStore } from "../lib/drawing-store";
 import { XLogger } from "../lib/logger";
 import { TabUtils } from "../lib/utils/tab.utils";
-import "./Popup.styles.scss";
 import { ConfirmLoadDrawingModal } from "./components/ConfirmLoadDrawingModal.component";
+import { SearchTextField } from "./components/SearchTextField.component";
+import { TabGridContent } from "./components/TabGridContent.component";
 import { useCurrentDrawingId } from "./hooks/useCurrentDrawing.hook";
 import { useDrawingLoading } from "./hooks/useDrawingLoading.hook";
 import { useDrawings } from "./hooks/useDrawings.hook";
 import { useFavorites } from "./hooks/useFavorites.hook";
 import { useFolders } from "./hooks/useFolders.hook";
 import { useRestorePoint } from "./hooks/useRestorePoint.hook";
+import { useSidebarSelected } from "./hooks/useSidebarSelected.hook";
 import { checkCleanOutdatedFiles } from "./utils/chek-clean-outdated-files.util";
 
 const Popup: React.FC = () => {
@@ -51,7 +42,6 @@ const Popup: React.FC = () => {
     removeDrawingFromAllFolders,
   } = useFolders();
   const [searchTerm, setSearchTerm] = React.useState<string>("");
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
   const {
     currentDrawingId,
     inExcalidrawPage,
@@ -60,7 +50,8 @@ const Popup: React.FC = () => {
     setIsLiveCollaboration,
   } = useCurrentDrawingId();
   const drawingIdToSwitch = useRef<string | undefined>(undefined);
-  const [sidebarSelected, setSidebarSelected] = useState("");
+  const { sidebarSelected, setSidebarSelected, selectedTab } =
+    useSidebarSelected();
   const { getRestorePoint, setRestorePoint } = useRestorePoint();
   const { loading, startLoading } = useDrawingLoading();
   const [sortBy, setSortBy] = useState<SortByEnum>(SortByEnum.LastModified);
@@ -214,32 +205,6 @@ const Popup: React.FC = () => {
     ? drawingsFromRestore
     : filterDrawings(drawings, folders);
 
-  const showDrawings = (
-    drawingData: DrawingVirtualizedData,
-    viewKey: string
-  ) => {
-    return (
-      <Grid
-        columnCount={2}
-        rowCount={drawingData.drawings.length / 2}
-        columnWidth={200}
-        rowHeight={170}
-        width={400}
-        height={404}
-        itemData={drawingData}
-        itemKey={({ columnIndex, rowIndex }) => {
-          const arrayIndex = rowIndex * 2 + columnIndex;
-          if (arrayIndex < drawingData.drawings.length) {
-            return viewKey + drawingData.drawings[arrayIndex].id;
-          }
-          return arrayIndex;
-        }}
-      >
-        {DrawingVirtualizedWrapper}
-      </Grid>
-    );
-  };
-
   const drawingData: DrawingVirtualizedData = {
     drawings: filteredDrawings,
     folders,
@@ -272,41 +237,16 @@ const Popup: React.FC = () => {
           currentDrawing={currentDrawing}
           isLiveCollaboration={isLiveCollaboration}
           onSaveDrawing={handleSaveCurrentDrawing}
-          SearchComponent={
-            <TextField.Root
-              style={{
-                width: "183px",
-              }}
-              autoFocus
-              ref={searchInputRef}
+          searchComponent={
+            <SearchTextField
               value={searchTerm}
-              onChange={(event) => {
+              onChangeValue={(newValue) => {
                 if (sidebarSelected !== "Results") {
                   setSidebarSelected("Results");
                 }
-                setSearchTerm(event.target.value);
+                setSearchTerm(newValue);
               }}
-              placeholder="Search Drawing"
-            >
-              <TextField.Slot>
-                <MagnifyingGlassIcon height="16" width="16" />
-              </TextField.Slot>
-              <TextField.Slot>
-                {searchTerm && (
-                  <IconButton
-                    onClick={() => {
-                      setSearchTerm("");
-                      searchInputRef.current && searchInputRef.current?.focus();
-                    }}
-                    title="Cancel search"
-                    size="1"
-                    variant="ghost"
-                  >
-                    <CrossCircledIcon height="14" width="14" />
-                  </IconButton>
-                )}
-              </TextField.Slot>
-            </TextField.Root>
+            />
           }
         />
         <Flex
@@ -347,68 +287,78 @@ const Popup: React.FC = () => {
                 </Select.Content>
               </Select.Root>
             </div>
-            {sidebarSelected === "Favorites" &&
-              (filteredDrawings.length >= 1
-                ? showDrawings(drawingData, sidebarSelected)
-                : !isLoadingDrawings && (
-                    <Placeholder
-                      icon={<HeartFilledIcon width={"30"} height={"30"} />}
-                      message={
-                        <Text size={"2"}>
-                          Your favorite drawings will appear here
-                        </Text>
-                      }
-                    />
-                  ))}
-
-            {sidebarSelected === "Results" &&
-              (searchTerm !== ""
-                ? filteredDrawings.length >= 1
-                  ? showDrawings(drawingData, "Results")
-                  : !isLoadingDrawings && (
-                      <Placeholder
-                        icon={
-                          <MagnifyingGlassIcon width={"30"} height={"30"} />
-                        }
-                        message={
-                          <Text size={"2"}>
-                            No items found for "{searchTerm}"
-                          </Text>
-                        }
-                      />
-                    )
-                : !isLoadingDrawings && (
+            <Tabs.Root value={selectedTab}>
+              <TabGridContent
+                value="All"
+                selectedTab={selectedTab}
+                drawingData={drawingData}
+                isLoadingDrawings={isLoadingDrawings}
+                emptyPlaceholder={
+                  <Placeholder
+                    icon={<BookmarkIcon width={"30"} height={"30"} />}
+                    message={
+                      <Text size={"2"}>
+                        You don't have saved drawings yet. <br />
+                        Start saving one by clicking on the{" "}
+                        <Strong>Save</Strong> button.
+                      </Text>
+                    }
+                  />
+                }
+              />
+              <TabGridContent
+                value="Favorites"
+                selectedTab={selectedTab}
+                drawingData={drawingData}
+                isLoadingDrawings={isLoadingDrawings}
+                emptyPlaceholder={
+                  <Placeholder
+                    icon={<HeartFilledIcon width={"30"} height={"30"} />}
+                    message={
+                      <Text size={"2"}>
+                        Your favorite drawings will appear here
+                      </Text>
+                    }
+                  />
+                }
+              />
+              <TabGridContent
+                value="Results"
+                selectedTab={selectedTab}
+                drawingData={drawingData}
+                isLoadingDrawings={isLoadingDrawings}
+                showGridWhen={searchTerm !== ""}
+                emptyPlaceholder={
+                  searchTerm === "" ? (
                     <Placeholder
                       icon={<MagnifyingGlassIcon width={"30"} height={"30"} />}
                       message={<Text size={"2"}>Search for something</Text>}
                     />
-                  ))}
-
-            {(sidebarSelected === "All" || sidebarSelected === "") &&
-              (filteredDrawings.length > 0
-                ? showDrawings(drawingData, "All")
-                : !isLoadingDrawings && (
+                  ) : (
                     <Placeholder
-                      icon={<BookmarkIcon width={"30"} height={"30"} />}
+                      icon={<MagnifyingGlassIcon width={"30"} height={"30"} />}
                       message={
                         <Text size={"2"}>
-                          You don't have saved drawings yet. <br />
-                          Start saving one by clicking on the{" "}
-                          <Strong>Save</Strong> button.
+                          No items found for "{searchTerm}"
                         </Text>
                       }
                     />
-                  ))}
-
-            {sidebarSelected.startsWith("folder:") &&
-              (filteredDrawings.length > 0
-                ? showDrawings(drawingData, sidebarSelected)
-                : !isLoadingDrawings && (
-                    <Placeholder
-                      icon={<Cross1Icon width={"30"} height={"30"} />}
-                      message={<Text size={"2"}>Collection is empty.</Text>}
-                    />
-                  ))}
+                  )
+                }
+              />
+              <TabGridContent
+                value="Folder"
+                selectedTab={selectedTab}
+                drawingData={drawingData}
+                isLoadingDrawings={isLoadingDrawings}
+                emptyPlaceholder={
+                  <Placeholder
+                    icon={<Cross1Icon width={"30"} height={"30"} />}
+                    message={<Text size={"2"}>Collection is empty.</Text>}
+                  />
+                }
+              />
+            </Tabs.Root>
           </div>
         </Flex>
         <ConfirmLoadDrawingModal

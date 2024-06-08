@@ -24,7 +24,7 @@ const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
 
 type NavBarProps = {
-  SearchComponent: ReactElement;
+  searchComponent: ReactElement;
   CurrentItemButton?: ReactElement;
   onCreateNewDrawing: (name: string) => void;
   onNewDrawing: () => void;
@@ -36,7 +36,7 @@ type NavBarProps = {
 };
 
 export function NavBar({
-  SearchComponent,
+  searchComponent,
   CurrentItemButton,
   ...props
 }: NavBarProps) {
@@ -75,7 +75,7 @@ export function NavBar({
         background: "#6965db12",
       }}
     >
-      {SearchComponent}
+      {searchComponent}
       {CurrentItemButton}
       {props.currentDrawing && (
         <Flex
