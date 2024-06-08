@@ -89,6 +89,13 @@ browser.runtime.onMessage.addListener(
             });
 
             isDrawingUpdated = differences.length > 0;
+
+            XLogger.debug("Differences Result", {
+              isDrawingUpdated,
+              differences,
+              existendDrawingDataString,
+              newDrawingDataString,
+            });
           } catch {}
 
           const newData: IDrawing = {
