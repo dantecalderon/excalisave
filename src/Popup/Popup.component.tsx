@@ -42,12 +42,12 @@ import { useDrawingLoading } from "./hooks/useDrawingLoading.hook";
 import { useFavorites } from "./hooks/useFavorites.hook";
 import { useFolders } from "./hooks/useFolders.hook";
 import { useRestorePoint } from "./hooks/useRestorePoint.hook";
+import { useDrawings } from "./hooks/useDrawings.hook";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
 
 const Popup: React.FC = () => {
-  const [drawings, setDrawings] = React.useState<IDrawing[]>([]);
   const { favorites, addToFavorites, removeFromFavorites } = useFavorites();
   const {
     folders,
@@ -75,6 +75,20 @@ const Popup: React.FC = () => {
   const [isConfirmSwitchDialogOpen, setIsConfirmSwitchDialogOpen] =
     useState<boolean>(false);
 
+  const {
+    drawings,
+    onRenameDrawing,
+    onDeleteDrawing,
+    currentDrawing,
+    handleCreateNewDrawing,
+    handleNewDrawing,
+    handleSaveCurrentDrawing,
+  } = useDrawings(
+    currentDrawingId,
+    setCurrentDrawingId,
+    removeDrawingFromAllFolders
+  );
+
   useEffect(() => {
     getRestorePoint()
       .then((restorePoint) => {
@@ -94,40 +108,6 @@ const Popup: React.FC = () => {
       .catch(() => {
         setSidebarSelected("All");
       });
-
-    const loadDrawings = async () => {
-      const result: Record<string, IDrawing> =
-        await browser.storage.local.get();
-
-      const newDrawings: IDrawing[] = Object.values(result).filter(
-        (drawing: IDrawing) => drawing?.id?.startsWith?.("drawing:")
-      );
-
-      setDrawings(newDrawings);
-    };
-
-    loadDrawings();
-
-    // This allows updating the screenshot preview when popup is open to not wait until next time it's opened
-    const onDrawingChanged = async (changes: any, areaName: string) => {
-      if (areaName !== "local") return;
-
-      setDrawings((prevDrawings) => {
-        return prevDrawings.map((drawing) => {
-          if (changes[drawing.id]) {
-            return {
-              ...drawing,
-              ...changes[drawing.id].newValue,
-              updatedAt: drawing.updatedAt, // Do not update updatedAt date to avoid reordering on UI
-            };
-          }
-
-          return drawing;
-        });
-      });
-    };
-
-    browser.storage.onChanged.addListener(onDrawingChanged);
 
     browser.storage.session
       .get("lastFileCleanupDate")
@@ -172,10 +152,6 @@ const Popup: React.FC = () => {
           ]);
         }
       });
-
-    return () => {
-      browser.storage.onChanged.removeListener(onDrawingChanged);
-    };
   }, []);
 
   useEffect(() => {
@@ -185,51 +161,6 @@ const Popup: React.FC = () => {
       sortBy,
     });
   }, [searchTerm, sidebarSelected, sortBy]);
-
-  const onRenameDrawing = async (id: string, newName: string) => {
-    try {
-      const newDrawing = drawings.map((drawing) => {
-        if (drawing.id === id) {
-          return {
-            ...drawing,
-            name: newName,
-          };
-        }
-
-        return drawing;
-      });
-
-      setDrawings(newDrawing);
-
-      await browser.storage.local.set({
-        [id]: {
-          ...drawings.find((drawing) => drawing.id === id),
-          name: newName,
-        },
-      });
-    } catch (error) {
-      XLogger.error("Error renaming drawing", error);
-    }
-  };
-
-  const onDeleteDrawing = async (id: string) => {
-    try {
-      const newDrawing = drawings.filter((drawing) => drawing.id !== id);
-
-      setDrawings(newDrawing);
-
-      if (currentDrawingId === id) {
-        setCurrentDrawingId(undefined);
-      }
-
-      await Promise.allSettled([
-        removeDrawingFromAllFolders(id),
-        DrawingStore.deleteDrawing(id),
-      ]);
-    } catch (error) {
-      XLogger.error("Error deleting drawing", error);
-    }
-  };
 
   const handleLoadItem = async (loadDrawingId: string) => {
     const isSameDrawing = loadDrawingId === currentDrawing?.id;
@@ -251,26 +182,6 @@ const Popup: React.FC = () => {
       setIsLiveCollaboration(false);
     }
   };
-
-  const handleCreateNewDrawing = async (name: string) => {
-    await DrawingStore.saveNewDrawing({ name });
-    window.close();
-  };
-
-  const handleSaveCurrentDrawing = async () => {
-    await DrawingStore.saveCurrentDrawing();
-    window.close();
-  };
-
-  const handleNewDrawing = async () => {
-    await DrawingStore.newDrawing();
-    setCurrentDrawingId(undefined);
-    window.close();
-  };
-
-  const currentDrawing = drawings.find(
-    (drawing) => drawing.id === currentDrawingId
-  );
 
   const handleLoadItemWithConfirm = async (loadDrawingId: string) => {
     if (!inExcalidrawPage) return;
@@ -380,8 +291,6 @@ const Popup: React.FC = () => {
     onAddToFolder: addDrawingToFolder,
     onRemoveFromFolder: removeDrawingFromFolder,
   };
-
-  console.log("Filtered Drawings:", filteredDrawings);
 
   return (
     <Theme
