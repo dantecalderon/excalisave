@@ -263,8 +263,6 @@ const Popup: React.FC = () => {
     onRemoveFromFolder: removeDrawingFromFolder,
   };
 
-  console.log(folders, filteredDrawings);
-
   return (
     <Theme
       accentColor="iris"

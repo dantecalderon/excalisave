@@ -1,6 +1,5 @@
-import React from "react";
-import { RestorePoint } from "../../interfaces/restore-point.interface";
 import { browser } from "webextension-polyfill-ts";
+import { RestorePoint } from "../../interfaces/restore-point.interface";
 
 const restorePointKey = "restorePoint";
 
@@ -24,7 +23,6 @@ export function useRestorePoint() {
         ...data,
       },
     });
-    console.log("🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦Saved, ", data);
   };
 
   return {
