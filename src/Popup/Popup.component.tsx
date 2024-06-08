@@ -114,8 +114,10 @@ const Popup: React.FC = () => {
             return {
               ...drawing,
               ...changes[drawing.id].newValue,
+              updatedAt: drawing.updatedAt, // Do not update updatedAt date to avoid reordering on UI
             };
           }
+
           return drawing;
         });
       });
@@ -317,6 +319,17 @@ const Popup: React.FC = () => {
         );
       } else if (sortBy === SortByEnum.Alphabetically) {
         return a.name.localeCompare(b.name);
+      } else if (sortBy === SortByEnum.LastModified) {
+        if (a.updatedAt && b.updatedAt) {
+          return (
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          );
+        } else if (a.updatedAt) {
+          return -1;
+        } else if (b.updatedAt) {
+          return 1;
+        }
+        return 0;
       }
 
       return 0;
@@ -362,6 +375,8 @@ const Popup: React.FC = () => {
     onAddToFolder: addDrawingToFolder,
     onRemoveFromFolder: removeDrawingFromFolder,
   };
+
+  console.log("Filtered Drawings:", filteredDrawings);
 
   return (
     <Theme

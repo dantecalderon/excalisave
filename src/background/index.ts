@@ -7,6 +7,7 @@ import {
 } from "../constants/message.types";
 import { IDrawing } from "../interfaces/drawing.interface";
 import { XLogger } from "../lib/logger";
+import diff from "microdiff";
 
 browser.runtime.onInstalled.addListener(async () => {
   XLogger.log("onInstalled...");
@@ -32,11 +33,13 @@ browser.runtime.onMessage.addListener(
 
       switch (message.type) {
         case MessageType.SAVE_NEW_DRAWING:
+          const creationDate = new Date().toISOString();
           await browser.storage.local.set({
             [message.payload.id]: {
               id: message.payload.id,
               name: message.payload.name,
-              createdAt: new Date().toISOString(),
+              createdAt: creationDate,
+              updatedAt: creationDate,
               imageBase64: message.payload.imageBase64,
               viewBackgroundColor: message.payload.viewBackgroundColor,
               data: {
@@ -59,6 +62,35 @@ browser.runtime.onMessage.addListener(
             return;
           }
 
+          let isDrawingUpdated = true;
+
+          try {
+            const existendDrawingDataString = JSON.parse(
+              exitentDrawing?.data?.excalidraw
+            );
+            const newDrawingDataString = JSON.parse(message.payload.excalidraw);
+
+            const differences = diff(
+              existendDrawingDataString,
+              newDrawingDataString,
+              {
+                cyclesFix: false,
+              }
+            ).filter((difference) => {
+              // These fields are misleading, sometimes they change without the data having changed
+              const propertiesToIgnore = ["version", "versionNonce", "updated"];
+
+              return difference.path.every((path) => {
+                if (typeof path === "string") {
+                  return !propertiesToIgnore.includes(path);
+                }
+                return true;
+              });
+            });
+
+            isDrawingUpdated = differences.length > 0;
+          } catch {}
+
           const newData: IDrawing = {
             ...exitentDrawing,
             name: message.payload.name || exitentDrawing.name,
@@ -67,6 +99,9 @@ browser.runtime.onMessage.addListener(
             viewBackgroundColor:
               message.payload.viewBackgroundColor ||
               exitentDrawing.viewBackgroundColor,
+            updatedAt: isDrawingUpdated
+              ? new Date().toISOString()
+              : exitentDrawing.updatedAt,
             data: {
               excalidraw: message.payload.excalidraw,
               excalidrawState: message.payload.excalidrawState,
