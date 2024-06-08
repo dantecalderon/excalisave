@@ -2,15 +2,10 @@ import {
   BookmarkIcon,
   Cross1Icon,
   CrossCircledIcon,
-  ExclamationTriangleIcon,
   HeartFilledIcon,
-  InfoCircledIcon,
   MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
 import {
-  Button,
-  Callout,
-  Dialog,
   Flex,
   IconButton,
   Select,
@@ -35,6 +30,7 @@ import { DrawingStore } from "../lib/drawing-store";
 import { XLogger } from "../lib/logger";
 import { TabUtils } from "../lib/utils/tab.utils";
 import "./Popup.styles.scss";
+import { ConfirmLoadDrawingModal } from "./components/ConfirmLoadDrawingModal.component";
 import { useCurrentDrawingId } from "./hooks/useCurrentDrawing.hook";
 import { useDrawingLoading } from "./hooks/useDrawingLoading.hook";
 import { useDrawings } from "./hooks/useDrawings.hook";
@@ -42,10 +38,6 @@ import { useFavorites } from "./hooks/useFavorites.hook";
 import { useFolders } from "./hooks/useFolders.hook";
 import { useRestorePoint } from "./hooks/useRestorePoint.hook";
 import { checkCleanOutdatedFiles } from "./utils/chek-clean-outdated-files.util";
-import { ConfirmLoadDrawingModal } from "./components/ConfirmLoadDrawingModal.component";
-
-const DialogDescription = Dialog.Description as any;
-const CalloutText = Callout.Text as any;
 
 const Popup: React.FC = () => {
   const { favorites, addToFavorites, removeFromFavorites } = useFavorites();
