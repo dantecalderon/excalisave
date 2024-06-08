@@ -204,7 +204,7 @@ export function NavBar({
           <Dialog.Title size={"4"}>Save new Drawing</Dialog.Title>
 
           <Flex direction="column" mt="3">
-            <TextField.Input
+            <TextField.Root
               onChange={(event) => {
                 setName(event.target.value);
               }}
@@ -245,7 +245,7 @@ export function NavBar({
           <Dialog.Title size={"4"}>Duplicate Drawing</Dialog.Title>
 
           <Flex direction="column" mt="3">
-            <TextField.Input
+            <TextField.Root
               onChange={(event) => {
                 setDuplicateName(event.target.value);
               }}
