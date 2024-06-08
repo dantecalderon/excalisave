@@ -42,6 +42,7 @@ import { useFavorites } from "./hooks/useFavorites.hook";
 import { useFolders } from "./hooks/useFolders.hook";
 import { useRestorePoint } from "./hooks/useRestorePoint.hook";
 import { checkCleanOutdatedFiles } from "./utils/chek-clean-outdated-files.util";
+import { ConfirmLoadDrawingModal } from "./components/ConfirmLoadDrawingModal.component";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -420,71 +421,16 @@ const Popup: React.FC = () => {
                   ))}
           </div>
         </Flex>
-
-        {/* -------- CONFIRM DIALOG ---------  */}
-        <Dialog.Root
-          open={isConfirmSwitchDialogOpen}
-          onOpenChange={(isOpen) => setIsConfirmSwitchDialogOpen(isOpen)}
-        >
-          <Dialog.Content
-            style={{ maxWidth: 450, paddingTop: 22, paddingBottom: 20 }}
-            size="1"
-          >
-            <Dialog.Title size={"4"}>You have unsaved changes</Dialog.Title>
-
-            <DialogDescription>
-              <Callout.Root color="red">
-                <Callout.Icon>
-                  <ExclamationTriangleIcon />
-                </Callout.Icon>
-                <CalloutText>
-                  Data will be lost. Are you sure you want to continue?
-                </CalloutText>
-              </Callout.Root>
-              <br />
-              <Text
-                color="gray"
-                size="1"
-                style={{
-                  marginLeft: "5px",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                <InfoCircledIcon
-                  width="12"
-                  height="12"
-                  style={{ paddingRight: "5px" }}
-                />
-                You can click "Cancel" and save your changes before.
-              </Text>
-              <br />
-            </DialogDescription>
-
-            <Flex gap="3" mt="4" justify="end">
-              <Dialog.Close>
-                <Button variant="soft" color="gray">
-                  Cancel
-                </Button>
-              </Dialog.Close>
-              <Dialog.Close>
-                <Button
-                  color="red"
-                  onClick={() => {
-                    setIsConfirmSwitchDialogOpen(false);
-
-                    if (drawingIdToSwitch.current) {
-                      handleLoadItem(drawingIdToSwitch.current);
-                      drawingIdToSwitch.current = undefined;
-                    }
-                  }}
-                >
-                  Yes, continue
-                </Button>
-              </Dialog.Close>
-            </Flex>
-          </Dialog.Content>
-        </Dialog.Root>
+        <ConfirmLoadDrawingModal
+          isOpen={isConfirmSwitchDialogOpen}
+          onClose={() => setIsConfirmSwitchDialogOpen(false)}
+          onConfirm={() => {
+            if (drawingIdToSwitch.current) {
+              handleLoadItem(drawingIdToSwitch.current);
+              drawingIdToSwitch.current = undefined;
+            }
+          }}
+        />
       </section>
     </Theme>
   );

@@ -86,9 +86,9 @@ export function useDrawings(
 
   const onDeleteDrawing = async (id: string) => {
     try {
-      const newDrawing = drawings.filter((drawing) => drawing.id !== id);
+      const newDrawings = drawings.filter((drawing) => drawing.id !== id);
 
-      setDrawings(newDrawing);
+      setDrawings(newDrawings);
 
       if (currentDrawingId === id) {
         setCurrentDrawingId(undefined);
