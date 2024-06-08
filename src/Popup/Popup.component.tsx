@@ -21,7 +21,6 @@ import {
 } from "@radix-ui/themes";
 import React, { useEffect, useRef, useState } from "react";
 import { FixedSizeGrid as Grid } from "react-window";
-import { browser } from "webextension-polyfill-ts";
 import {
   DrawingVirtualizedData,
   DrawingVirtualizedWrapper,
@@ -29,7 +28,6 @@ import {
 import { NavBar } from "../components/NavBar/Navbar.component";
 import { Placeholder } from "../components/Placeholder/Placeholder.component";
 import { Sidebar } from "../components/Sidebar/Sidebar.component";
-import { CleanupFilesMessage, MessageType } from "../constants/message.types";
 import { IDrawing } from "../interfaces/drawing.interface";
 import { Folder } from "../interfaces/folder.interface";
 import { SORT_BY_OPTIONS, SortByEnum } from "../lib/constants";
@@ -39,10 +37,11 @@ import { TabUtils } from "../lib/utils/tab.utils";
 import "./Popup.styles.scss";
 import { useCurrentDrawingId } from "./hooks/useCurrentDrawing.hook";
 import { useDrawingLoading } from "./hooks/useDrawingLoading.hook";
+import { useDrawings } from "./hooks/useDrawings.hook";
 import { useFavorites } from "./hooks/useFavorites.hook";
 import { useFolders } from "./hooks/useFolders.hook";
 import { useRestorePoint } from "./hooks/useRestorePoint.hook";
-import { useDrawings } from "./hooks/useDrawings.hook";
+import { checkCleanOutdatedFiles } from "./utils/chek-clean-outdated-files.util";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -74,9 +73,12 @@ const Popup: React.FC = () => {
   const [sortBy, setSortBy] = useState<SortByEnum>(SortByEnum.LastModified);
   const [isConfirmSwitchDialogOpen, setIsConfirmSwitchDialogOpen] =
     useState<boolean>(false);
-
+  const [drawingsFromRestore, setDrawingsFromRestore] = useState<IDrawing[]>(
+    []
+  );
   const {
     drawings,
+    isLoadingDrawings,
     onRenameDrawing,
     onDeleteDrawing,
     currentDrawing,
@@ -92,6 +94,10 @@ const Popup: React.FC = () => {
   useEffect(() => {
     getRestorePoint()
       .then((restorePoint) => {
+        if (Array.isArray(restorePoint?.drawings)) {
+          setDrawingsFromRestore(restorePoint.drawings);
+        }
+
         if (restorePoint?.searchTerm) {
           setSearchTerm(restorePoint.searchTerm);
         }
@@ -109,58 +115,8 @@ const Popup: React.FC = () => {
         setSidebarSelected("All");
       });
 
-    browser.storage.session
-      .get("lastFileCleanupDate")
-      .then(async ({ lastFileCleanupDate }) => {
-        const currentDate = new Date().getTime();
-
-        // Run cleanup process every 3 days
-        // Condition is checked every time popup is opened
-        const Ndays = 1000 * 60 * 60 * 24 * 3;
-        const hasPassedNDays = currentDate - lastFileCleanupDate > Ndays;
-        if (hasPassedNDays || !lastFileCleanupDate) {
-          XLogger.debug("N days passed. Cleaning up old files");
-
-          const activeTab = await TabUtils.getActiveTab();
-
-          XLogger.debug("Active tab", activeTab);
-          if (
-            !activeTab ||
-            !activeTab.url?.startsWith("https://excalidraw.com")
-          ) {
-            XLogger.error(
-              "Error loading drawing: No active tab or drawing found",
-              {
-                activeTab,
-              }
-            );
-
-            return;
-          }
-
-          await Promise.all([
-            browser.runtime.sendMessage({
-              type: MessageType.CLEANUP_FILES,
-              payload: {
-                tabId: activeTab.id,
-                executionTimestamp: currentDate,
-              },
-            } as CleanupFilesMessage),
-            browser.storage.session.set({
-              lastFileCleanupDate: currentDate,
-            }),
-          ]);
-        }
-      });
+    checkCleanOutdatedFiles();
   }, []);
-
-  useEffect(() => {
-    setRestorePoint({
-      searchTerm,
-      sidebarSelected: sidebarSelected || "All",
-      sortBy,
-    });
-  }, [searchTerm, sidebarSelected, sortBy]);
 
   const handleLoadItem = async (loadDrawingId: string) => {
     const isSameDrawing = loadDrawingId === currentDrawing?.id;
@@ -228,7 +184,7 @@ const Popup: React.FC = () => {
       }
     }
 
-    return filteredDrawings.sort((a, b) => {
+    const result = filteredDrawings.sort((a, b) => {
       if (sortBy === SortByEnum.LastCreated) {
         return (
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -250,9 +206,20 @@ const Popup: React.FC = () => {
 
       return 0;
     });
+
+    setRestorePoint({
+      drawings: result.slice(0, 6),
+      searchTerm,
+      sidebarSelected: sidebarSelected || "All",
+      sortBy,
+    });
+
+    return result;
   };
 
-  const filteredDrawings = filterDrawings(drawings, folders);
+  const filteredDrawings = isLoadingDrawings
+    ? drawingsFromRestore
+    : filterDrawings(drawings, folders);
 
   const showDrawings = (
     drawingData: DrawingVirtualizedData,
@@ -268,7 +235,11 @@ const Popup: React.FC = () => {
         height={404}
         itemData={drawingData}
         itemKey={({ columnIndex, rowIndex }) => {
-          return viewKey + drawingData.drawings[rowIndex * 2 + columnIndex].id;
+          const arrayIndex = rowIndex * 2 + columnIndex;
+          if (arrayIndex < drawingData.drawings.length) {
+            return viewKey + drawingData.drawings[arrayIndex].id;
+          }
+          return arrayIndex;
         }}
       >
         {DrawingVirtualizedWrapper}
@@ -291,6 +262,8 @@ const Popup: React.FC = () => {
     onAddToFolder: addDrawingToFolder,
     onRemoveFromFolder: removeDrawingFromFolder,
   };
+
+  console.log(folders, filteredDrawings);
 
   return (
     <Theme

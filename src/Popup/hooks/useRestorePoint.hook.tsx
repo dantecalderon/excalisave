@@ -14,10 +14,17 @@ export function useRestorePoint() {
     return restorePoint.restorePoint;
   };
 
-  const setRestorePoint = async (data: RestorePoint): Promise<void> => {
+  const setRestorePoint = async (
+    data: Partial<RestorePoint>
+  ): Promise<void> => {
+    const currentData = await getRestorePoint();
     await browser.storage.session.set({
-      restorePoint: data,
+      restorePoint: {
+        ...currentData,
+        ...data,
+      },
     });
+    console.log("🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦Saved, ", data);
   };
 
   return {

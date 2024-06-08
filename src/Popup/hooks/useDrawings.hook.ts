@@ -1,26 +1,33 @@
-import React, { useEffect } from "react";
-import { IDrawing } from "../../interfaces/drawing.interface";
+import { useEffect, useState } from "react";
 import { browser } from "webextension-polyfill-ts";
-import { XLogger } from "../../lib/logger";
+import { IDrawing } from "../../interfaces/drawing.interface";
 import { DrawingStore } from "../../lib/drawing-store";
+import { XLogger } from "../../lib/logger";
 
 export function useDrawings(
   currentDrawingId: string,
   setCurrentDrawingId: (id: string | undefined) => void,
   removeDrawingFromAllFolders: (id: string) => Promise<void>
 ) {
-  const [drawings, setDrawings] = React.useState<IDrawing[]>([]);
+  const [isLoadingDrawings, setIsLoadingDrawings] = useState(true);
+  const [drawings, setDrawings] = useState<IDrawing[]>([]);
 
   useEffect(() => {
     const loadDrawings = async () => {
-      const result: Record<string, IDrawing> =
-        await browser.storage.local.get();
+      try {
+        const result: Record<string, IDrawing> =
+          await browser.storage.local.get();
 
-      const newDrawings: IDrawing[] = Object.values(result).filter(
-        (drawing: IDrawing) => drawing?.id?.startsWith?.("drawing:")
-      );
+        const newDrawings: IDrawing[] = Object.values(result).filter(
+          (drawing: IDrawing) => drawing?.id?.startsWith?.("drawing:")
+        );
 
-      setDrawings(newDrawings);
+        setDrawings(newDrawings);
+      } catch (error) {
+        XLogger.error("Error loading drawings", error);
+      } finally {
+        setIsLoadingDrawings(false);
+      }
     };
 
     loadDrawings();
@@ -114,6 +121,7 @@ export function useDrawings(
 
   return {
     drawings,
+    isLoadingDrawings,
     onRenameDrawing,
     onDeleteDrawing,
     handleCreateNewDrawing,
