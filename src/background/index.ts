@@ -7,11 +7,13 @@ import {
 } from "../constants/message.types";
 import { IDrawing } from "../interfaces/drawing.interface";
 import { XLogger } from "../lib/logger";
-import diff from "microdiff";
+import { hasDrawingDataChanged } from "./helpers/background.helpers";
 
+/**
+ * Executed when the extension is installed or updated.
+ * This is used to update the content scripts in all tabs.
+ */
 browser.runtime.onInstalled.addListener(async () => {
-  XLogger.log("onInstalled...");
-
   for (const cs of (browser.runtime.getManifest() as any).content_scripts) {
     for (const tab of await browser.tabs.query({ url: cs.matches })) {
       browser.scripting.executeScript({
@@ -24,8 +26,7 @@ browser.runtime.onInstalled.addListener(async () => {
 
 browser.runtime.onMessage.addListener(
   async (
-    message: SaveDrawingMessage | SaveNewDrawingMessage | CleanupFilesMessage,
-    _sender: any
+    message: SaveDrawingMessage | SaveNewDrawingMessage | CleanupFilesMessage
   ) => {
     try {
       XLogger.log("Mesage brackground", message);
@@ -34,6 +35,7 @@ browser.runtime.onMessage.addListener(
       switch (message.type) {
         case MessageType.SAVE_NEW_DRAWING:
           const creationDate = new Date().toISOString();
+
           await browser.storage.local.set({
             [message.payload.id]: {
               id: message.payload.id,
@@ -62,41 +64,10 @@ browser.runtime.onMessage.addListener(
             return;
           }
 
-          let isDrawingUpdated = true;
-
-          try {
-            const existendDrawingDataString = JSON.parse(
-              exitentDrawing?.data?.excalidraw
-            );
-            const newDrawingDataString = JSON.parse(message.payload.excalidraw);
-
-            const differences = diff(
-              existendDrawingDataString,
-              newDrawingDataString,
-              {
-                cyclesFix: false,
-              }
-            ).filter((difference) => {
-              // These fields are misleading, sometimes they change without the data having changed
-              const propertiesToIgnore = ["version", "versionNonce", "updated"];
-
-              return difference.path.every((path) => {
-                if (typeof path === "string") {
-                  return !propertiesToIgnore.includes(path);
-                }
-                return true;
-              });
-            });
-
-            isDrawingUpdated = differences.length > 0;
-
-            XLogger.debug("Differences Result", {
-              isDrawingUpdated,
-              differences,
-              existendDrawingDataString,
-              newDrawingDataString,
-            });
-          } catch {}
+          const hasDataChanged = hasDrawingDataChanged(
+            exitentDrawing.data.excalidraw,
+            message.payload.excalidraw
+          );
 
           const newData: IDrawing = {
             ...exitentDrawing,
@@ -106,7 +77,7 @@ browser.runtime.onMessage.addListener(
             viewBackgroundColor:
               message.payload.viewBackgroundColor ||
               exitentDrawing.viewBackgroundColor,
-            updatedAt: isDrawingUpdated
+            updatedAt: hasDataChanged
               ? new Date().toISOString()
               : exitentDrawing.updatedAt,
             data: {
@@ -129,7 +100,7 @@ browser.runtime.onMessage.addListener(
             await browser.storage.local.get()
           ).filter((o) => o?.id?.startsWith?.("drawing:"));
 
-          const imagesUsed = drawings
+          const imagesUsedFileIds = drawings
             .map((drawing) => {
               return JSON.parse(drawing.data.excalidraw).filter(
                 (item: any) => item.type === "image"
@@ -138,9 +109,11 @@ browser.runtime.onMessage.addListener(
             .flat()
             .map<string>((item) => item?.fileId);
 
-          const uniqueImagesUsed = Array.from(new Set(imagesUsed));
+          const uniqueImagesUsedFileIds = Array.from(
+            new Set(imagesUsedFileIds)
+          );
 
-          XLogger.log("Used fileIds", uniqueImagesUsed);
+          XLogger.log("Used fileIds", uniqueImagesUsedFileIds);
 
           // This workaround is to pass params to script, it's ugly but it works
           await browser.scripting.executeScript({
@@ -150,7 +123,7 @@ browser.runtime.onMessage.addListener(
             func: (fileIds: string[], executionTimestamp: number) => {
               window.__SCRIPT_PARAMS__ = { fileIds, executionTimestamp };
             },
-            args: [uniqueImagesUsed, message.payload.executionTimestamp],
+            args: [uniqueImagesUsedFileIds, message.payload.executionTimestamp],
           });
 
           await browser.scripting.executeScript({
