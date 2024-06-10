@@ -1,6 +1,5 @@
-import React from "react";
-import { RestorePoint } from "../../interfaces/restore-point.interface";
 import { browser } from "webextension-polyfill-ts";
+import { RestorePoint } from "../../interfaces/restore-point.interface";
 
 const restorePointKey = "restorePoint";
 
@@ -14,9 +13,15 @@ export function useRestorePoint() {
     return restorePoint.restorePoint;
   };
 
-  const setRestorePoint = async (data: RestorePoint): Promise<void> => {
+  const setRestorePoint = async (
+    data: Partial<RestorePoint>
+  ): Promise<void> => {
+    const currentData = await getRestorePoint();
     await browser.storage.session.set({
-      restorePoint: data,
+      restorePoint: {
+        ...currentData,
+        ...data,
+      },
     });
   };
 

@@ -14,11 +14,11 @@ export function Placeholder(props: PlaceholderProps) {
       direction={"column"}
       gap={"4"}
       className="Placeholder"
-      height={"100%"}
       style={{
         borderRadius: "6px",
         color: "var(--gray-a10)",
         textAlign: "center",
+        height: "300px",
       }}
     >
       {props.icon}

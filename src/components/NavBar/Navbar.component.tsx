@@ -24,7 +24,7 @@ const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
 
 type NavBarProps = {
-  SearchComponent: ReactElement;
+  searchComponent: ReactElement;
   CurrentItemButton?: ReactElement;
   onCreateNewDrawing: (name: string) => void;
   onNewDrawing: () => void;
@@ -36,7 +36,7 @@ type NavBarProps = {
 };
 
 export function NavBar({
-  SearchComponent,
+  searchComponent,
   CurrentItemButton,
   ...props
 }: NavBarProps) {
@@ -75,7 +75,7 @@ export function NavBar({
         background: "#6965db12",
       }}
     >
-      {SearchComponent}
+      {searchComponent}
       {CurrentItemButton}
       {props.currentDrawing && (
         <Flex
@@ -204,7 +204,7 @@ export function NavBar({
           <Dialog.Title size={"4"}>Save new Drawing</Dialog.Title>
 
           <Flex direction="column" mt="3">
-            <TextField.Input
+            <TextField.Root
               onChange={(event) => {
                 setName(event.target.value);
               }}
@@ -245,7 +245,7 @@ export function NavBar({
           <Dialog.Title size={"4"}>Duplicate Drawing</Dialog.Title>
 
           <Flex direction="column" mt="3">
-            <TextField.Input
+            <TextField.Root
               onChange={(event) => {
                 setDuplicateName(event.target.value);
               }}
