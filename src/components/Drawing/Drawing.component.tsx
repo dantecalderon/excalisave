@@ -17,9 +17,12 @@ import { Folder } from "../../interfaces/folder.interface";
 
 const DialogDescription = Dialog.Description as any;
 
-type DrawingProps = {
+export type DrawingProps = {
+  // In Grid position
+  isLeft?: boolean;
+  isRight?: boolean;
+
   favorite?: boolean;
-  index: number;
   isCurrent: boolean;
   inExcalidrawPage: boolean;
   drawing: IDrawing;
@@ -54,12 +57,17 @@ export function Drawing(props: DrawingProps) {
   };
 
   return (
-    <Box className="Drawing">
+    <Box
+      className="Drawing"
+      style={{
+        paddingLeft: props.isLeft ? "6px" : "0",
+        paddingRight: props.isRight ? "6px" : "0",
+      }}
+    >
       <Flex direction="column" gap="2" position={"relative"}>
         <img
           className="Drawing__image"
           onClick={() => props.onClick(props.drawing.id)}
-          loading={props.index < 4 ? "eager" : "lazy"}
           style={{
             boxShadow: props.isCurrent ? "0px 0px 0px 2px #30a46c" : undefined,
             position: "relative",
@@ -200,7 +208,7 @@ export function Drawing(props: DrawingProps) {
               </DialogDescription>
 
               <Flex direction="column" mt="3">
-                <TextField.Input
+                <TextField.Root
                   onChange={(event) => {
                     setNewName(event.target.value);
                   }}
