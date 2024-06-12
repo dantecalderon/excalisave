@@ -256,6 +256,8 @@ export function ImpExp() {
           });
 
           XLogger.debug("Finished importing drawings");
+
+          throw new Error("Bullshit this error should occurr");
         } catch (error) {
           XLogger.error("Error while reading zip file", error);
         } finally {
