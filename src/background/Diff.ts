@@ -1,19 +1,13 @@
-import {
-  Folder,
-  TItem,
-  ItemType,
-  TItemLocation,
-  ItemLocation,
-  hydrate,
-} from "./Tree";
-
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
 
 type TItem = ExcalidrawElement;
 
 import Mappings, { MappingSnapshot } from "./Mappings";
 import { XLogger as Logger } from "../lib/logger";
-import { IDrawing } from "../interfaces/drawing.interface";
+import {
+  ItemLocation,
+  TItemLocation,
+} from "./interfaces/storage-type.interface";
 
 export const ActionType = {
   CREATE: "CREATE",
@@ -346,10 +340,11 @@ export default class Diff {
   static fromJSON(json: any) {
     const diff = new Diff();
     json.forEach((action: Action): void => {
-      action.payload = hydrate(action.payload);
-      action.oldItem = action.oldItem && hydrate(action.oldItem);
+      action.payload = structuredClone(action.payload);
+      action.oldItem = action.oldItem && structuredClone(action.oldItem);
       diff.commit(action);
     });
+
     return diff;
   }
 }
