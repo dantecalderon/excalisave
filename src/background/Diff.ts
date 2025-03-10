@@ -8,6 +8,7 @@ import {
   ItemLocation,
   TItemLocation,
 } from "./interfaces/storage-type.interface";
+import { ExcalidrawDraw } from "./Tree";
 
 export const ActionType = {
   CREATE: "CREATE",
@@ -137,14 +138,15 @@ export default class Diff {
   static findChain(
     mappingsSnapshot: MappingSnapshot,
     actions: Action[],
-    itemTree: Folder,
+    itemTree: ExcalidrawDraw,
     currentItem: TItem,
     targetAction: Action,
     chain: Action[] = []
   ): boolean {
-    const targetItemInTree = itemTree.findFolder(
+    const targetItemInTree = itemTree.findElement(
       Mappings.mapId(mappingsSnapshot, targetAction.payload, itemTree.location)
     );
+
     if (
       targetAction.payload.findItem(
         ItemType.FOLDER,

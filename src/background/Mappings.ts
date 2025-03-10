@@ -9,7 +9,9 @@ type InternalItemTypeMapping = {
   ServerToLocal: Record<string, string>;
 };
 
-export type Mapping = Record<ItemType, Record<string, number | string>>;
+export type Mapping = Record<ItemType, Record<string, string>>;
+
+export type MappingSnapshotType = "ServerToLocal" | "LocalToServer";
 
 export type MappingSnapshot = {
   ServerToLocal: Mapping;
@@ -44,8 +46,8 @@ export default class Mappings {
     localId,
     remoteId,
   }: {
-    localId?: string | number;
-    remoteId?: string | number;
+    localId?: string;
+    remoteId?: string;
   }): Promise<void> {
     Mappings.add(this.folders, { localId, remoteId });
   }
@@ -64,8 +66,8 @@ export default class Mappings {
     localId,
     remoteId,
   }: {
-    localId?: string | number;
-    remoteId?: string | number;
+    localId?: string;
+    remoteId?: string;
   }): Promise<void> {
     Mappings.add(this.bookmarks, { localId, remoteId });
   }
@@ -89,10 +91,7 @@ export default class Mappings {
 
   private static add(
     mappings: Mapping,
-    {
-      localId,
-      remoteId,
-    }: { localId?: string | number; remoteId?: string | number }
+    { localId, remoteId }: { localId?: string; remoteId?: string }
   ) {
     if (typeof localId === "undefined" || typeof remoteId === "undefined") {
       throw new Error("Cannot add empty mapping");
@@ -126,11 +125,16 @@ export default class Mappings {
     mappingsSnapshot: MappingSnapshot,
     item: TItem,
     target: TItemLocation
-  ): string | number {
+  ): string {
     if (item.location === target) {
       return item.id;
     }
-    return mappingsSnapshot[item.location + "To" + target][item.type][item.id];
+
+    const mappingTarget = (item.location +
+      "To" +
+      target) as MappingSnapshotType;
+
+    return mappingsSnapshot[mappingTarget][item.type][item.id];
   }
 
   static mapParentId(
@@ -141,9 +145,12 @@ export default class Mappings {
     if (item.location === target) {
       return item.parentId;
     }
-    return mappingsSnapshot[item.location + "To" + target].folder[
-      item.parentId
-    ];
+
+    const mappingTarget = (item.location +
+      "To" +
+      target) as MappingSnapshotType;
+
+    return mappingsSnapshot[mappingTarget].folder[item.parentId];
   }
 
   static mappable(

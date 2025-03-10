@@ -124,7 +124,7 @@ export default class CachingAdapter implements Adapter, BulkImportResource {
     this.bookmarksCache.createIndex();
   }
 
-  async createFolder(folder: any): Promise<string | number> {
+  async createDraw(folder: any): Promise<string | number> {
     XLogger.log("CREATEFOLDER", { folder });
     // const newFolder = new Tree.Folder({
     //   id: ++this.highestId,
@@ -144,7 +144,7 @@ export default class CachingAdapter implements Adapter, BulkImportResource {
     return undefined;
   }
 
-  async updateFolder(folder: any): Promise<void> {
+  async updateDraw(folder: any): Promise<void> {
     XLogger.log("UPDATEFOLDER", { folder });
     const id = folder.id;
     const oldFolder = this.bookmarksCache.findFolder(id);
@@ -183,7 +183,7 @@ export default class CachingAdapter implements Adapter, BulkImportResource {
     this.bookmarksCache.createIndex();
   }
 
-  async removeFolder(folder: any): Promise<void> {
+  async removeDraw(folder: any): Promise<void> {
     XLogger.log("REMOVEFOLDER", { folder });
     const id = folder.id;
     const oldFolder = this.bookmarksCache.findFolder(id);

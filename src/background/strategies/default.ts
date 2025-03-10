@@ -1,33 +1,27 @@
-import {
-  Bookmark,
-  Folder,
-  TItem,
-  ItemType,
-  ItemLocation,
-  TItemLocation,
-} from "../Tree";
+import * as Parallel from "async-parallel";
+import { throttle } from "throttle-debounce";
+import { CancelledSyncError, FailsafeError } from "../../errors/Error";
+import { XLogger as Logger } from "../../lib/logger";
 import Diff, {
   Action,
   ActionType,
   CreateAction,
   MoveAction,
   RemoveAction,
-  ReorderAction,
   UpdateAction,
 } from "../Diff";
-import Scanner from "../Scanner";
-import * as Parallel from "async-parallel";
-import { throttle } from "throttle-debounce";
 import Mappings, { MappingSnapshot } from "../Mappings";
-import TResource, {
-  OrderFolderResource,
-  TLocalTree,
-} from "../interfaces/Resource";
-import { TAdapter } from "../interfaces/Adapter";
-import { CancelledSyncError, FailsafeError } from "../../errors/Error";
-import NextcloudBookmarksAdapter from "../adapters/NextcloudBookmarks";
+import Scanner from "../Scanner";
+import { ExcalidrawDraw, TItem } from "../Tree";
 import CachingAdapter from "../adapters/Caching";
-import { XLogger as Logger } from "../../lib/logger";
+import NextcloudBookmarksAdapter from "../adapters/NextcloudBookmarks";
+import { ItemType } from "../background.constants";
+import { TAdapter } from "../interfaces/Adapter";
+import TResource, { TLocalTree } from "../interfaces/Resource";
+import {
+  ItemLocation,
+  TItemLocation,
+} from "../interfaces/storage-type.interface";
 
 const ACTION_CONCURRENCY = 12;
 
@@ -83,7 +77,7 @@ export default class SyncProcess {
     return this.mappings;
   }
 
-  setCacheTree(cacheTree: Folder) {
+  setCacheTree(cacheTree: ExcalidrawDraw) {
     this.cacheTreeRoot = cacheTree;
   }
 
@@ -1054,8 +1048,10 @@ export default class SyncProcess {
     isSubPlan = false
   ): Promise<Diff> {
     Logger.log("Executing plan for " + targetLocation);
-    const run = (action) =>
+
+    const run = (action: Action) =>
       this.executeAction(resource, action, targetLocation, plan, donePlan);
+
     let mappedPlan;
 
     if (
@@ -1390,198 +1386,6 @@ export default class SyncProcess {
     }
   }
 
-  reconcileReorderings(
-    targetTreePlan: Diff,
-    sourceTreePlan: Diff,
-    mappingSnapshot: MappingSnapshot
-  ): Diff {
-    Logger.log("Reconciling reorders to create a plan");
-    const newPlan = new Diff();
-    targetTreePlan
-      .getActions(ActionType.REORDER)
-      .map((a) => a as ReorderAction)
-      // MOVEs have oldItem from cacheTree and payload now mapped to their corresponding target tree
-      // REORDERs have payload in source tree
-      .forEach((oldReorderAction) => {
-        // clone action
-        const reorderAction = {
-          ...oldReorderAction,
-          order: oldReorderAction.order.slice(),
-        };
-
-        const removed = sourceTreePlan
-          .getActions(ActionType.REMOVE)
-          .filter((removal) =>
-            removal.payload.findItem(
-              reorderAction.payload.type,
-              removal.payload.id
-            )
-          );
-        if (removed.length) {
-          return;
-        }
-
-        // Find Away-moves
-        const childAwayMoves = sourceTreePlan
-          .getActions(ActionType.MOVE)
-          .filter(
-            (move) =>
-              String(reorderAction.payload.id) !==
-                String(move.payload.parentId) && // reorder IDs are from localTree (source of this plan), move.oldItem IDs are from server tree (source of other plan)
-              reorderAction.order.find(
-                (item) =>
-                  String(item.id) === String(move.payload.id) &&
-                  item.type === move.payload.type
-              ) // move.payload IDs are from localTree (target of the other plan
-          );
-
-        // Find removals
-        const concurrentRemovals = sourceTreePlan
-          .getActions(ActionType.REMOVE)
-          .filter((removal) =>
-            reorderAction.order.find(
-              (item) =>
-                String(item.id) === String(removal.payload.id) &&
-                item.type === removal.payload.type
-            )
-          );
-
-        // Remove away-moves and removals
-        reorderAction.order = reorderAction.order.filter((item) => {
-          let action;
-          if (
-            // eslint-disable-next-line no-cond-assign
-            (action = childAwayMoves.find(
-              (move) =>
-                String(item.id) === String(move.payload.id) &&
-                move.payload.type === item.type
-            ))
-          ) {
-            Logger.log("ReconcileReorders: Removing moved item from order", {
-              move: action,
-              reorder: reorderAction,
-            });
-            return false;
-          }
-
-          if (
-            // eslint-disable-next-line no-cond-assign
-            (action = concurrentRemovals.find(
-              (removal) =>
-                String(item.id) === String(removal.payload.id) &&
-                removal.payload.type === item.type
-            ))
-          ) {
-            Logger.log("ReconcileReorders: Removing removed item from order", {
-              item,
-              reorder: reorderAction,
-              removal: action,
-            });
-            return false;
-          }
-          return true;
-        });
-
-        // Find and insert creations
-        const concurrentCreations = sourceTreePlan
-          .getActions(ActionType.CREATE)
-          .map((a) => a as CreateAction)
-          .filter(
-            (creation) =>
-              String(reorderAction.payload.id) ===
-              String(creation.payload.parentId)
-          );
-        concurrentCreations.forEach((a) => {
-          Logger.log("ReconcileReorders: Inserting created item into order", {
-            creation: a,
-            reorder: reorderAction,
-          });
-          reorderAction.order.splice(a.index, 0, {
-            type: a.payload.type,
-            id: a.payload.id,
-          });
-        });
-
-        // Find and insert moves at move target
-        const moves = sourceTreePlan
-          .getActions(ActionType.MOVE)
-          .map((a) => a as MoveAction)
-          .filter(
-            (move) =>
-              String(reorderAction.payload.id) ===
-                String(move.payload.parentId) &&
-              !reorderAction.order.find(
-                (item) =>
-                  String(item.id) === String(move.payload.id) &&
-                  item.type === move.payload.type
-              )
-          );
-        moves.forEach((a) => {
-          Logger.log("ReconcileReorders: Inserting moved item into order", {
-            move: a,
-            reorder: reorderAction,
-          });
-          reorderAction.order.splice(a.index, 0, {
-            type: a.payload.type,
-            id: a.payload.id,
-          });
-        });
-
-        newPlan.commit(reorderAction);
-      });
-    return newPlan;
-  }
-
-  async executeReorderings(
-    resource: OrderFolderResource,
-    reorderings: Diff
-  ): Promise<void> {
-    Logger.log("Executing reorderings");
-    Logger.log({ reorderings });
-
-    await Parallel.each(
-      reorderings.getActions(ActionType.REORDER).map((a) => a as ReorderAction),
-      async (action) => {
-        Logger.log("Executing reorder action", action);
-        const item = action.payload;
-
-        if (this.canceled) {
-          throw new CancelledSyncError();
-        }
-
-        if (action.order.length <= 1) {
-          return;
-        }
-
-        const items = {};
-        try {
-          await resource.orderFolder(
-            item.id,
-            action.order
-              // in rare situations the diff generates a REMOVE for an item that is still in the tree,
-              // make sure to sort out those failed mapings (value: undefined)
-              // also make sure that items are unique
-              .filter((item) => {
-                if (items[item.type + "" + item.id]) {
-                  return false;
-                }
-                items[item.type + "" + item.id] = true;
-                return item.id;
-              })
-          );
-        } catch (e) {
-          Logger.log(
-            "Failed to execute REORDER: " + e.message + "\nMoving on."
-          );
-          Logger.log(e);
-        }
-        reorderings.retract(action);
-        this.updateProgress();
-      },
-      ACTION_CONCURRENCY
-    );
-  }
-
   async addMapping(
     resource: TResource,
     item: TItem,
@@ -1590,13 +1394,13 @@ export default class SyncProcess {
     await Promise.resolve();
     let localId, remoteId;
     if (resource === this.server) {
-      localId = item.id;
+      localId = item.getId();
       remoteId = newId;
     } else {
       localId = newId;
-      remoteId = item.id;
+      remoteId = item.getId();
     }
-    if (item.type === "folder") {
+    if (item.type === ItemType.DRAW) {
       await this.mappings.addFolder({ localId, remoteId });
     } else {
       await this.mappings.addBookmark({ localId, remoteId });
@@ -1606,11 +1410,12 @@ export default class SyncProcess {
   async removeMapping(resource: TResource, item: TItem): Promise<void> {
     let localId, remoteId;
     if (resource === this.server) {
-      remoteId = item.id;
+      remoteId = item.getId();
     } else {
-      localId = item.id;
+      localId = item.getId();
     }
-    if (item.type === "folder") {
+
+    if (item.type === ItemType.DRAW) {
       await this.mappings.removeFolder({ localId, remoteId });
     } else {
       await this.mappings.removeBookmark({ localId, remoteId });
@@ -1624,7 +1429,7 @@ export default class SyncProcess {
     if (this.canceled) {
       throw new CancelledSyncError();
     }
-    if (!(serverItem instanceof Folder)) return;
+    if (!(serverItem instanceof ExcalidrawDraw)) return;
     if (!("loadFolderChildren" in this.server)) return;
     let localItem, cacheItem;
     if (serverItem === this.serverTreeRoot) {
@@ -1653,13 +1458,6 @@ export default class SyncProcess {
     }
     serverItem.children = children;
     serverItem.loaded = true;
-
-    // recurse
-    await Parallel.each(
-      serverItem.children,
-      (child) => this.loadChildren(child, mappingsSnapshot),
-      10
-    );
   }
 
   async folderHasChanged(
@@ -1668,15 +1466,19 @@ export default class SyncProcess {
     serverItem: TItem
   ): Promise<boolean> {
     const mappingsSnapshot = this.mappings.getSnapshot();
+
     const localHash = localItem
       ? await localItem.hash(this.preserveOrder)
       : null;
+
     const cacheHash = cacheItem
       ? await cacheItem.hash(this.preserveOrder)
       : null;
+
     const serverHash = serverItem
       ? await serverItem.hash(this.preserveOrder)
       : null;
+
     const reconciled = !cacheItem;
     const changedLocally =
       localHash !== cacheHash ||
@@ -1689,18 +1491,9 @@ export default class SyncProcess {
     return changedLocally || changedUpstream || reconciled;
   }
 
-  filterOutUnmappedItems(tree: Folder, mapping: MappingSnapshot) {
+  filterOutUnmappedItems(tree: ExcalidrawDraw, mapping: MappingSnapshot) {
     tree.children = tree.children.filter((child) => {
-      if (child instanceof Bookmark) {
-        return child.id in mapping.LocalToServer.bookmark;
-      } else {
-        if (child.id in mapping.LocalToServer.folder) {
-          this.filterOutUnmappedItems(child, mapping);
-          return true;
-        } else {
-          return false;
-        }
-      }
+      return child.data.id in mapping.LocalToServer.bookmark;
     });
   }
 
@@ -1743,24 +1536,24 @@ export default class SyncProcess {
       case "default":
         strategy = new SyncProcess(mappings, localTree, server, progressCb);
         break;
-      case "merge":
-        MergeSyncProcess = (await import("./Merge")).default;
-        strategy = new MergeSyncProcess(
-          mappings,
-          localTree,
-          server,
-          progressCb
-        );
-        break;
-      case "unidirectional":
-        UnidirectionalSyncProcess = (await import("./Unidirectional")).default;
-        strategy = new UnidirectionalSyncProcess(
-          mappings,
-          localTree,
-          server,
-          progressCb
-        );
-        break;
+      // case "merge":
+      //   MergeSyncProcess = (await import("./Merge")).default;
+      //   strategy = new MergeSyncProcess(
+      //     mappings,
+      //     localTree,
+      //     server,
+      //     progressCb
+      //   );
+      //   break;
+      // case "unidirectional":
+      //   UnidirectionalSyncProcess = (await import("./Unidirectional")).default;
+      //   strategy = new UnidirectionalSyncProcess(
+      //     mappings,
+      //     localTree,
+      //     server,
+      //     progressCb
+      //   );
+      //   break;
       default:
         throw new Error("Unknown strategy: " + json.strategy);
     }
