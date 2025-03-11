@@ -13,7 +13,7 @@ const { browser } = require("webextension-polyfill-ts");
 
     await browser.runtime.sendMessage(
       As<SaveDrawingMessage>({
-        type: MessageType.SAVE_DRAWING,
+        type: MessageType.UPDATE_DRAWING,
         payload: {
           id: currentDrawingId,
           excalidraw: drawingDataState.excalidraw,

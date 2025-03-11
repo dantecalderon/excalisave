@@ -36,6 +36,7 @@ const extensionReloaderPlugin = new ExtensionReloader({
     extensionPage: [
       "popup",
       "options",
+      "login",
       "execute-scripts/sendDrawingDataToSave",
       "content-scripts/listenDrawingUpdates",
       "content-scripts/addOverwriteAction",
@@ -100,6 +101,7 @@ module.exports = {
     ),
     popup: path.join(sourcePath, "Popup", "index.tsx"),
     options: path.join(sourcePath, "Options", "index.tsx"),
+    login: path.join(sourcePath, "Login", "index.tsx"),
   },
 
   output: {
@@ -203,6 +205,13 @@ module.exports = {
       chunks: ["options"],
       hash: true,
       filename: "options.html",
+    }),
+    new HtmlWebpackPlugin({
+      template: path.join(viewsPath, "login.html"),
+      inject: "body",
+      chunks: ["login"],
+      hash: true,
+      filename: "login.html",
     }),
     // write css file(s) to build folder
     new MiniCssExtractPlugin({ filename: "css/[name].css" }),

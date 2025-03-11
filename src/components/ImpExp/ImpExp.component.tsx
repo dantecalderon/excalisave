@@ -21,6 +21,7 @@ import { keyBy } from "../../lib/utils/array.utils";
 import { RandomUtils } from "../../lib/utils/random.utils";
 import { TabUtils } from "../../lib/utils/tab.utils";
 import { parseDataJSON } from "./helpers/import.helpers";
+import { IDrawingExport } from "../../interfaces/drawing-export.interface";
 
 const CalloutText = Callout.Text as any;
 
@@ -310,7 +311,7 @@ export function ImpExp() {
             }
 
             // This structure follows the .excalidraw file structure, so it can be imported independently without needing to install the extension.
-            const drawingToExport: any = {
+            const drawingToExport: IDrawingExport = {
               elements,
               version: 2, // TODO: Should we get the version from source code? https://github.com/excalidraw/excalidraw/blob/master/packages/excalidraw/constants.ts#L261
               type: "excalidraw",

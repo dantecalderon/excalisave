@@ -3,12 +3,27 @@ import { RandomUtils } from "./utils/random.utils";
 import { TabUtils } from "./utils/tab.utils";
 import { DRAWING_ID_KEY_LS } from "./constants";
 import { XLogger } from "./logger";
+import { IDrawing } from "../interfaces/drawing.interface";
 
 type SaveDrawingProps = {
   name: string;
 };
 
 export class DrawingStore {
+  static async findDrawingById(
+    drawingId: string
+  ): Promise<IDrawing | undefined> {
+    const drawing = (await browser.storage.local.get(drawingId))[
+      drawingId
+    ] as IDrawing;
+
+    if (!drawing) {
+      return undefined;
+    }
+
+    return drawing;
+  }
+
   static async saveNewDrawing({ name }: SaveDrawingProps) {
     XLogger.log("Saving new drawing", { name });
     const activeTab = await TabUtils.getActiveTab();
@@ -153,7 +168,7 @@ export class DrawingStore {
       }
 
       return hasUnsaved;
-    } catch { }
+    } catch {}
 
     // By default, show confirmation dialog, we ensure the action is approved.
     return true;

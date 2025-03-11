@@ -6,6 +6,7 @@ import {
   InfoCircledIcon,
 } from "@radix-ui/react-icons";
 import {
+  Avatar,
   Button,
   Callout,
   Dialog,
@@ -19,6 +20,11 @@ import React, { ReactElement, useEffect, useState } from "react";
 import { IDrawing } from "../../interfaces/drawing.interface";
 import "./Navbar.styles.scss";
 import { DrawingStore } from "../../lib/drawing-store";
+import { browser } from "webextension-polyfill-ts";
+import { GoogleDriveApi } from "../../lib/google-drive-api";
+import { XLogger } from "../../lib/logger";
+import { GoogleUserMe } from "../../interfaces/google.interface";
+import { point } from "@excalidraw/excalidraw/types/ga";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -45,6 +51,22 @@ export function NavBar({
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [userInfo, setUserInfo] = useState<GoogleUserMe | null>(null);
+
+  useEffect(() => {
+    async function getUserInfo() {
+      try {
+        const userInfo = await GoogleDriveApi.getAuthenticatedUser();
+        setUserInfo(userInfo);
+      } catch (error) {
+        XLogger.error("Error loading user");
+      }
+    }
+
+    getUserInfo();
+  }, []);
+
+  console.log(userInfo);
 
   useEffect(() => {
     if (props.currentDrawing) {
@@ -84,7 +106,7 @@ export function NavBar({
             background: "rgb(48 164 108)",
             color: "white",
             border: "1px solid #2b9160",
-            width: "250px",
+            width: "200px",
             borderRadius: "5px",
           }}
           align={"center"}
@@ -144,6 +166,69 @@ export function NavBar({
               <CaretDownIcon width="18" height="18" />
             </IconButton>
           </DropdownMenu.Trigger>
+
+          <DropdownMenu.Root>
+            <Flex gap="2" pl="1">
+              {userInfo ? (
+                <DropdownMenu.Trigger
+                  disabled={
+                    !props.inExcalidrawPage ||
+                    props.isLoading ||
+                    props.isLiveCollaboration
+                  }
+                >
+                  <Avatar
+                    style={{ cursor: "pointer" }}
+                    radius="full"
+                    src={userInfo?.picture}
+                    fallback="A"
+                    size={"2"}
+                  />
+                </DropdownMenu.Trigger>
+              ) : (
+                <Button
+                  onClick={async () => {
+                    await GoogleDriveApi.login();
+                    window.location.reload();
+                  }}
+                  radius="full"
+                  variant="surface"
+                >
+                  Log In
+                </Button>
+              )}
+            </Flex>
+            <DropdownMenu.Content>
+              <DropdownMenu.Label className="DropdownMenuLabel">
+                Logged in as
+              </DropdownMenu.Label>
+              <DropdownMenu.Item
+                disabled
+                style={{
+                  color: "var(--gray-12)",
+                }}
+              >
+                <b>{userInfo?.name}</b>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                disabled
+                style={{
+                  color: "var(--gray-12)",
+                }}
+              >
+                {userInfo?.email}
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator />
+              <DropdownMenu.Item
+                onClick={() => {
+                  (browser.identity as any).clearAllCachedAuthTokens();
+                  window.location.reload();
+                }}
+              >
+                Log Out
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
         </Flex>
 
         <DropdownMenu.Content size="2">
@@ -187,8 +272,6 @@ export function NavBar({
               Duplicate
             </DropdownMenu.Item>
           )}
-          {/* <DropdownMenu.Separator /> */}
-          {/* <DropdownMenu.Item>Add to favorites</DropdownMenu.Item> */}
         </DropdownMenu.Content>
       </DropdownMenu.Root>
 

@@ -9,6 +9,8 @@ export interface IDrawing {
   createdAt: string;
   imageBase64?: string;
   viewBackgroundColor?: string;
+  // This is the hash of the drawing data, used to check if the drawing has changed
+  hash?: string;
   data: {
     excalidraw: string;
     excalidrawState: string;

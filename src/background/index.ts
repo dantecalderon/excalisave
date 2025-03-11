@@ -9,8 +9,6 @@ import { IDrawing } from "../interfaces/drawing.interface";
 import { XLogger } from "../lib/logger";
 import { TabUtils } from "../lib/utils/tab.utils";
 import { RandomUtils } from "../lib/utils/random.utils";
-import { DrawingStore } from "../lib/drawing-store";
-import { useCurrentDrawingId } from "../Popup/hooks/useCurrentDrawing.hook";
 
 browser.runtime.onInstalled.addListener(async () => {
   XLogger.log("onInstalled...");
@@ -27,7 +25,11 @@ browser.runtime.onInstalled.addListener(async () => {
 
 browser.runtime.onMessage.addListener(
   async (
-    message: SaveDrawingMessage | SaveNewDrawingMessage | CleanupFilesMessage | any,
+    message:
+      | SaveDrawingMessage
+      | SaveNewDrawingMessage
+      | CleanupFilesMessage
+      | any,
     _sender: any
   ) => {
     try {
@@ -53,7 +55,7 @@ browser.runtime.onMessage.addListener(
           });
           break;
 
-        case MessageType.SAVE_DRAWING:
+        case MessageType.UPDATE_DRAWING:
           const exitentDrawing = (
             await browser.storage.local.get(message.payload.id)
           )[message.payload.id] as IDrawing;
@@ -71,6 +73,7 @@ browser.runtime.onMessage.addListener(
             viewBackgroundColor:
               message.payload.viewBackgroundColor ||
               exitentDrawing.viewBackgroundColor,
+            hash: message.payload.hash || exitentDrawing.hash,
             data: {
               excalidraw: message.payload.excalidraw,
               excalidrawState: message.payload.excalidrawState,

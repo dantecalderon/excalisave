@@ -25,7 +25,7 @@ type ScriptParams = {
 
   if (saveAsNew && (!params?.id || !params?.name)) {
     throw new Error(
-      'Error trying to send SAVE_DRAWING message: "name" is missing'
+      'Error trying to send UPDATE_DRAWING message: "name" is missing'
     );
   }
 
@@ -40,7 +40,7 @@ type ScriptParams = {
   const drawingDataState = await getDrawingDataState();
 
   browser.runtime.sendMessage({
-    type: saveAsNew ? MessageType.SAVE_NEW_DRAWING : MessageType.SAVE_DRAWING,
+    type: saveAsNew ? MessageType.SAVE_NEW_DRAWING : MessageType.UPDATE_DRAWING,
     payload: {
       id: drawingId,
       name: saveAsNew ? params.name : undefined,
