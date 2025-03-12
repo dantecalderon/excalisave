@@ -39,6 +39,7 @@ timeoutId = window.setTimeout(() => {
     const currentVersionFiles = localStorage.getItem("version-files");
 
     const currentId = localStorage.getItem(DRAWING_ID_KEY_LS);
+
     if (currentId && prevVersionFiles !== currentVersionFiles) {
       prevVersionFiles = currentVersionFiles;
 
@@ -46,6 +47,8 @@ timeoutId = window.setTimeout(() => {
 
       if (!currentDrawing) {
         XLogger.error("No current drawing found");
+
+        return;
       }
 
       const drawingDataState = await getDrawingDataState();
@@ -70,12 +73,15 @@ timeoutId = window.setTimeout(() => {
 
       const newDataHash = await hashJSON(newDrawingFileData);
 
-      if (newDataHash === currentDrawing?.hash) {
-        console.log("No changes in the drawing");
+      const hasDataChanged = newDataHash !== currentDrawing?.hash;
+
+      if (!hasDataChanged) {
+        XLogger.debug("No changes in the drawing");
+
         return;
-      } else {
-        console.log("Changes in the drawing");
       }
+
+      XLogger.debug("Drawing data has changed, updating...");
 
       try {
         await browser.runtime.sendMessage(

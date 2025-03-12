@@ -276,36 +276,35 @@ export function ImpExp() {
     browser.runtime.onMessage.addListener(
       async (message: ExportStoreMessage) => {
         if (message.type === MessageType.EXPORT_STORE) {
-          const result = await browser.storage.local.get();
+          const storage = await browser.storage.local.get();
 
           const drawings: IDrawing[] = [];
-          Object.entries(result).forEach(([key, value]) => {
+          Object.entries(storage).forEach(([key, value]) => {
             if (key.startsWith("drawing")) {
               drawings.push(value);
             }
           });
 
-          const zipFile = new JSZip();
-
           // Include favorites and folders
-          const favorites: string[] = result["favorites"] || [];
-          const folders: Folder[] = result["folders"] || [];
+          const favorites: string[] = storage["favorites"] || [];
+          const folders: Folder[] = storage["folders"] || [];
 
+          const zipFile = new JSZip();
           zipFile.file("data.json", JSON.stringify({ favorites, folders }));
 
-          // drawings
+          // Add all the `files` used by the drawing to the `files` property to export them.
+          // Usually these files are images and are exported as base 64.
           drawings.forEach((drawing) => {
             const elements = JSON.parse(drawing.data.excalidraw);
 
-            // Filter files used in the drawing elements
             const files: BinaryFiles = {};
             for (const element of elements) {
-              if (
-                !element.isDeleted &&
-                "fileId" in element &&
-                element.fileId &&
-                message.payload.files[element.fileId]
-              ) {
+              const elementUsesAFile =
+                !element.isDeleted && "fileId" in element && element.fileId;
+              const fileExistsOnStorage =
+                !!message.payload.files[element.fileId];
+
+              if (elementUsesAFile && fileExistsOnStorage) {
                 files[element.fileId] = message.payload.files[element.fileId];
               }
             }
@@ -330,6 +329,7 @@ export function ImpExp() {
               files,
             };
 
+            // Save all drawing files within the drawings folder:
             zipFile
               .folder("drawings")
               .file(

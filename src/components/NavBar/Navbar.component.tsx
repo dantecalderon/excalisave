@@ -24,7 +24,7 @@ import { browser } from "webextension-polyfill-ts";
 import { GoogleDriveApi } from "../../lib/google-drive-api";
 import { XLogger } from "../../lib/logger";
 import { GoogleUserMe } from "../../interfaces/google.interface";
-import { point } from "@excalidraw/excalidraw/types/ga";
+import { GoogleDriveIcon } from "../Icons/GDrive.icon";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -118,7 +118,6 @@ export function NavBar({
           </Text>
           <Text
             weight={"bold"}
-            title={props.currentDrawing?.name}
             style={{
               width: "100%",
               lineHeight: "1.4",
@@ -127,7 +126,6 @@ export function NavBar({
               textAlign: "center",
               whiteSpace: "nowrap",
             }}
-            key={"1"}
             size={"1"}
           >
             {props.currentDrawing?.name}
@@ -153,6 +151,7 @@ export function NavBar({
             }}
             value={"soft"}
           >
+            {userInfo && <GoogleDriveIcon />}
             {props.currentDrawing ? "Save" : "Save As..."}
           </Button>
           <DropdownMenu.Trigger
