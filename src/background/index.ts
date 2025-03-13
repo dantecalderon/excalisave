@@ -1,7 +1,9 @@
 import { browser } from "webextension-polyfill-ts";
 import {
+  AutoSaveMessage,
   CleanupFilesMessage,
   MessageType,
+  RenameDrawingMessage,
   SaveDrawingMessage,
   SaveNewDrawingMessage,
 } from "../constants/message.types";
@@ -30,7 +32,8 @@ browser.runtime.onMessage.addListener(
       | SaveDrawingMessage
       | SaveNewDrawingMessage
       | CleanupFilesMessage
-      | any,
+      | RenameDrawingMessage
+      | AutoSaveMessage,
     _sender: any
   ) => {
     try {
@@ -89,9 +92,6 @@ browser.runtime.onMessage.addListener(
 
           if (message.payload.saveToCloud) {
             XLogger.log("Saving to cloud", message.payload.id);
-
-            // DO THE SAVE HERE MTF
-            XLogger.log("Saving to cloud", message.payload.id);
             await GoogleDriveApi.saveFileToDrive({
               elements: JSON.parse(newData.data.excalidraw),
               version: 2,
@@ -108,6 +108,50 @@ browser.runtime.onMessage.addListener(
             });
             XLogger.log("Saved to cloud", message.payload.id);
           }
+          break;
+
+        case MessageType.RENAME_DRAWING:
+          XLogger.debug("Renaming drawing", {
+            id: message.payload.id,
+            newName: message.payload.name,
+          });
+
+          const drawingToUpdate = (
+            await browser.storage.local.get(message.payload.id)
+          )[message.payload.id] as IDrawing;
+
+          if (!drawingToUpdate) {
+            XLogger.error("No drawing found with id", message.payload.id);
+            return;
+          }
+
+          await browser.storage.local.set({
+            [message.payload.id]: {
+              ...drawingToUpdate,
+              name: message.payload.name,
+            },
+          });
+
+          if (message.payload.saveToCloud) {
+            XLogger.log("Renaming file in cloud");
+
+            const cloudFile = await GoogleDriveApi.findByExcalisaveId(
+              message.payload.id
+            );
+
+            if (!cloudFile?.[0]?.id) {
+              XLogger.error("No cloud file found with id");
+              return;
+            }
+
+            await GoogleDriveApi.renameFile(
+              cloudFile[0].id,
+              message.payload.name
+            );
+
+            XLogger.log("Renamed file in cloud");
+          }
+
           break;
 
         case MessageType.CLEANUP_FILES:

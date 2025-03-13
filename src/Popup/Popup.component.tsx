@@ -184,12 +184,7 @@ const Popup: React.FC = () => {
 
       setDrawings(newDrawing);
 
-      await browser.storage.local.set({
-        [id]: {
-          ...drawings.find((drawing) => drawing.id === id),
-          name: newName,
-        },
-      });
+      await DrawingStore.renameDrawing(id, newName);
     } catch (error) {
       XLogger.error("Error renaming drawing", error);
     }

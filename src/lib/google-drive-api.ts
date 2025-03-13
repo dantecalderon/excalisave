@@ -3,8 +3,10 @@ import { XLogger } from "./logger";
 import { IDrawingExport } from "../interfaces/drawing-export.interface";
 import axios from "redaxios";
 
+const BASE_URL = "https://www.googleapis.com";
+
 const api = axios.create({
-  baseURL: "https://www.googleapis.com",
+  baseURL: BASE_URL,
 });
 
 export class GoogleDriveApi {
@@ -81,63 +83,156 @@ export class GoogleDriveApi {
     return response;
   }
 
+  /**
+   * Check if a file exists in the drive with the given excalisaveId.
+   * (Different from the file id in Google Drive).
+   *
+   * We store a custom property 'excalisaveId' in the Google Drive file metadata to track the local drawing ID.
+   * @param excalisaveId The local id of the drawing.
+   */
+  static async findByExcalisaveId(excalisaveId: string) {
+    const token = await GoogleDriveApi.getToken();
+
+    const response = await api.get("/drive/v3/files", {
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+      params: {
+        q: `properties has { key='excalisaveId' and value='${excalisaveId}' }`,
+      },
+    });
+
+    XLogger.debug("File exists", response.data);
+
+    return response.data.files;
+  }
+
   static async saveFileToDrive(file: IDrawingExport) {
     try {
       const folderId = "195z-HF3Ddtw9UDsA3mXM-FkD5n4xN1F0";
       const token = await GoogleDriveApi.getToken();
+
       const localId = file.excalisave.id;
 
-      // First create the file metadata
-      const response = await api.post(
-        "/drive/v3/files",
-        {
-          name: file.excalisave.name + ".excalidraw",
-          parents: folderId ? [folderId] : [],
-          mimeType: "application/json",
-          description: localId,
-        },
-        {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
-          params: {
-            fields: "id, name, createdTime,modifiedTime,mimeType,size",
-          },
-        }
-      );
+      const cloudFile = await GoogleDriveApi.findByExcalisaveId(localId);
 
-      XLogger.info("Created file metadata in drive", response.data);
+      console.log("File exists??", cloudFile);
 
-      // Then upload the actual file content using the /upload endpoint
-      const fileContent = JSON.stringify(file);
-      const uploadResponse = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files/" +
-          response.data.id +
-          "?uploadType=media",
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: "Bearer " + token,
-            "Content-Type": "application/json",
-          },
-          body: fileContent,
-        }
-      );
+      let cloudFileId = cloudFile?.[0]?.id;
 
-      if (!uploadResponse.ok) {
-        throw new Error(
-          "Failed to upload file content: " + (await uploadResponse.text())
+      const cloudFileName = cloudFile?.[0]?.name?.split?.(".excalidraw")?.[0];
+      console.log("Cloud file name", cloudFileName, file.excalisave.name);
+
+      if (
+        cloudFileId &&
+        typeof cloudFileName === "string" &&
+        cloudFileName !== file.excalisave.name
+      ) {
+        XLogger.info("File already exists in drive", cloudFile);
+        await GoogleDriveApi.renameFile(
+          cloudFileId,
+          file.excalisave.name + ".excalidraw"
         );
       }
 
-      const uploadData = await uploadResponse.json();
-      XLogger.info("Uploaded file content to drive", uploadData);
+      if (!cloudFileId) {
+        // First create the file metadata
+        const response = await api.post(
+          "/drive/v3/files",
+          {
+            name: file.excalisave.name + ".excalidraw",
+            parents: folderId ? [folderId] : [],
+            mimeType: "application/json",
+            description: localId,
+            properties: {
+              // Save the local id of the drawing to be able to modify the file later
+              excalisaveId: localId,
+            },
+          },
+          {
+            headers: {
+              Authorization: "Bearer " + token,
+            },
+            params: {
+              fields: "id, name, createdTime, modifiedTime, size, properties",
+            },
+          }
+        );
 
-      return response.data;
+        XLogger.info("Created file metadata in drive", response.data);
+
+        cloudFileId = response.data.id;
+      }
+
+      const modifyFileResponse = await GoogleDriveApi.modifyFile(
+        token,
+        cloudFileId,
+        file
+      );
+
+      XLogger.info("Modified file in drive", modifyFileResponse);
+
+      return modifyFileResponse;
     } catch (error) {
       XLogger.error("Error saving file to drive", error);
       console.error(error);
       // throw new Error("Failed to save file to drive");
     }
+  }
+
+  /**
+   * Rename a file in Google Drive.
+   * @param fileId The excalisave id of the file to rename.
+   * @param newFilename Filename without extension.
+   */
+  static async renameFile(fileId: string, newFilename: string) {
+    const token = await GoogleDriveApi.getToken();
+
+    const response = await fetch(`${BASE_URL}/drive/v3/files/${fileId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: "Bearer " + token,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: newFilename + ".excalidraw",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to rename file '${fileId}' to '${newFilename}'`);
+    }
+
+    return response.json();
+  }
+
+  static async modifyFile(token: string, fileId: string, file: IDrawingExport) {
+    // Then upload the actual file content using the /upload endpoint
+    const fileContent = JSON.stringify(file);
+    const uploadResponse = await fetch(
+      "https://www.googleapis.com/upload/drive/v3/files/" +
+        fileId +
+        "?uploadType=media",
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: "Bearer " + token,
+          "Content-Type": "application/json",
+        },
+        body: fileContent,
+      }
+    );
+
+    if (!uploadResponse.ok) {
+      throw new Error(
+        "Failed to upload file content: " + (await uploadResponse.text())
+      );
+    }
+
+    const uploadData = await uploadResponse.json();
+    XLogger.info("Uploaded file content to drive", uploadData);
+
+    return uploadData;
   }
 }
