@@ -1,9 +1,10 @@
 import { browser } from "webextension-polyfill-ts";
-import { RandomUtils } from "./utils/random.utils";
-import { TabUtils } from "./utils/tab.utils";
+import { runActionScript } from "../execute-scripts/action-scripts";
+import { IDrawing } from "../interfaces/drawing.interface";
 import { DRAWING_ID_KEY_LS } from "./constants";
 import { XLogger } from "./logger";
-import { IDrawing } from "../interfaces/drawing.interface";
+import { RandomUtils } from "./utils/random.utils";
+import { TabUtils } from "./utils/tab.utils";
 
 type SaveDrawingProps = {
   name: string;
@@ -103,9 +104,8 @@ export class DrawingStore {
       return;
     }
 
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      files: ["./js/execute-scripts/sendDrawingDataToSave.bundle.js"],
+    await runActionScript("sendDrawingDataToSave", activeTab.id, {
+      saveToCloud: true,
     });
   }
 

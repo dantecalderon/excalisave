@@ -18,12 +18,13 @@ type ScriptParams = {
 
 (async () => {
   const params = getScriptParams<ScriptParams | undefined>();
+  console.log("HELLO DANTE JAJAJAJ", params);
 
-  const saveAsNew = !!params;
+  const saveAsNew = !!params?.id;
 
   const setCurrent = params?.setCurrent ?? true;
 
-  if (saveAsNew && (!params?.id || !params?.name)) {
+  if (saveAsNew && !params?.name) {
     throw new Error(
       'Error trying to send UPDATE_DRAWING message: "name" is missing'
     );
@@ -53,5 +54,7 @@ type ScriptParams = {
     },
   } as SaveDrawingMessage | SaveNewDrawingMessage);
 
-  setCurrent && saveAsNew && localStorage.setItem(DRAWING_ID_KEY_LS, drawingId);
+  if (setCurrent && saveAsNew) {
+    localStorage.setItem(DRAWING_ID_KEY_LS, drawingId);
+  }
 })();
