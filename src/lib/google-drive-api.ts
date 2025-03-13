@@ -63,12 +63,12 @@ export class GoogleDriveApi {
       method,
       body,
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: "Bearer " + token,
       },
     });
 
     if (!result.ok) {
-      throw new Error(`Failed to request ${path}`);
+      throw new Error("Failed to request " + path);
     }
 
     return result.json();
@@ -85,6 +85,7 @@ export class GoogleDriveApi {
   static async saveFileToDrive(file: IDrawingExport) {
     try {
       const folderId = "195z-HF3Ddtw9UDsA3mXM-FkD5n4xN1F0";
+      const token = await GoogleDriveApi.getToken();
       const response = await api.post(
         "/drive/v3/files",
         {
@@ -95,7 +96,7 @@ export class GoogleDriveApi {
         },
         {
           headers: {
-            Authorization: `Bearer ${await GoogleDriveApi.getToken()}`,
+            Authorization: "Bearer " + token,
           },
           params: {
             fields: "id, name, createdTime,modifiedTime,mimeType,size",
