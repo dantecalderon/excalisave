@@ -8,16 +8,13 @@ import {
   SaveNewDrawingMessage,
 } from "../constants/message.types";
 import { DRAWING_ID_KEY_LS } from "../lib/constants";
+import { ActionScriptParams } from "./action-scripts";
 const { browser } = require("webextension-polyfill-ts");
 
-type ScriptParams = {
-  name: string;
-  id: string;
-  setCurrent: boolean;
-};
-
 (async () => {
-  const params = getScriptParams<ScriptParams | undefined>();
+  const params = getScriptParams<
+    ActionScriptParams["sendDrawingDataToSave"] | undefined
+  >();
   console.log("HELLO DANTE JAJAJAJ", params);
 
   const saveAsNew = !!params?.id;
@@ -51,6 +48,7 @@ type ScriptParams = {
       versionDataState: drawingDataState.versionDataState,
       imageBase64: drawingDataState.imageBase64,
       viewBackgroundColor: drawingDataState.viewBackgroundColor,
+      saveToCloud: params?.saveToCloud,
     },
   } as SaveDrawingMessage | SaveNewDrawingMessage);
 

@@ -10,9 +10,13 @@ export enum MessageType {
   CLEAR_DRAWING_ID = "ClearDrawingID",
 }
 
+type WithSaveToCloud<T> = T & {
+  saveToCloud?: boolean;
+};
+
 export type SaveNewDrawingMessage = {
   type: MessageType.SAVE_NEW_DRAWING;
-  payload: {
+  payload: WithSaveToCloud<{
     id: string;
     name: string;
     excalidraw: string;
@@ -21,12 +25,12 @@ export type SaveNewDrawingMessage = {
     versionDataState: string;
     imageBase64?: DrawingDataState["imageBase64"];
     viewBackgroundColor?: DrawingDataState["viewBackgroundColor"];
-  };
+  }>;
 };
 
 export type SaveDrawingMessage = {
   type: MessageType.UPDATE_DRAWING;
-  payload: {
+  payload: WithSaveToCloud<{
     id: string;
     name?: string;
     excalidraw: string;
@@ -36,7 +40,7 @@ export type SaveDrawingMessage = {
     imageBase64?: DrawingDataState["imageBase64"];
     viewBackgroundColor?: DrawingDataState["viewBackgroundColor"];
     hash?: string;
-  };
+  }>;
 };
 
 export type ExportStoreMessage = {

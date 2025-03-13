@@ -2,7 +2,7 @@ import { browser } from "webextension-polyfill-ts";
 import { Optional } from "../lib/types.utils";
 
 // List of all action scripts with their params. The key is the filename without the extension.
-type ActionScriptParams = {
+export type ActionScriptParams = {
   sendDrawingDataToSave: {
     id?: string;
     name?: string;

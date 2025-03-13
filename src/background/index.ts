@@ -9,6 +9,7 @@ import { IDrawing } from "../interfaces/drawing.interface";
 import { XLogger } from "../lib/logger";
 import { TabUtils } from "../lib/utils/tab.utils";
 import { RandomUtils } from "../lib/utils/random.utils";
+import { GoogleDriveApi } from "../lib/google-drive-api";
 
 browser.runtime.onInstalled.addListener(async () => {
   XLogger.log("onInstalled...");
@@ -85,6 +86,28 @@ browser.runtime.onMessage.addListener(
           await browser.storage.local.set({
             [message.payload.id]: newData,
           });
+
+          if (message.payload.saveToCloud) {
+            XLogger.log("Saving to cloud", message.payload.id);
+
+            // DO THE SAVE HERE MTF
+            XLogger.log("Saving to cloud", message.payload.id);
+            await GoogleDriveApi.saveFileToDrive({
+              elements: JSON.parse(newData.data.excalidraw),
+              version: 2,
+              type: "excalidraw",
+              source: "https://excalidraw.com",
+              appState: JSON.parse(newData.data.excalidrawState),
+              excalisave: {
+                createdAt: exitentDrawing.createdAt,
+                id: exitentDrawing.id,
+                name: exitentDrawing.name,
+                imageBase64: exitentDrawing.imageBase64,
+              },
+              files: {},
+            });
+            XLogger.log("Saved to cloud", message.payload.id);
+          }
           break;
 
         case MessageType.CLEANUP_FILES:
