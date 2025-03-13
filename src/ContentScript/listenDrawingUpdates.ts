@@ -35,70 +35,72 @@ browser.runtime.connect().onDisconnect.addListener(function () {
 let prevVersionFiles = localStorage.getItem("version-files");
 
 timeoutId = window.setTimeout(() => {
-  // intervalId = window.setInterval(async () => {
-  //   const currentVersionFiles = localStorage.getItem("version-files");
-  //   const currentId = localStorage.getItem(DRAWING_ID_KEY_LS);
-  //   if (currentId && prevVersionFiles !== currentVersionFiles) {
-  //     prevVersionFiles = currentVersionFiles;
-  //     const currentDrawing = await DrawingStore.findDrawingById(currentId);
-  //     if (!currentDrawing) {
-  //       XLogger.error("No current drawing found");
-  //       return;
-  //     }
-  //     const drawingDataState = await getDrawingDataState();
-  //     const newDrawingFileData: IDrawingExport = {
-  //       elements: JSON.parse(drawingDataState.excalidraw),
-  //       version: 2,
-  //       type: "excalidraw",
-  //       source: "https://excalidraw.com",
-  //       appState: {
-  //         gridSize: null,
-  //         viewBackgroundColor: drawingDataState.viewBackgroundColor,
-  //       },
-  //       excalisave: {
-  //         id: currentId,
-  //         createdAt: currentDrawing?.createdAt,
-  //         imageBase64: currentDrawing?.imageBase64,
-  //         name: currentDrawing?.name,
-  //       },
-  //       files: {}, // TODO: Missing
-  //     };
-  //     const newDataHash = await hashJSON(newDrawingFileData);
-  //     const hasDataChanged = newDataHash !== currentDrawing?.hash;
-  //     if (!hasDataChanged) {
-  //       XLogger.debug("No changes in the drawing");
-  //       return;
-  //     }
-  //     XLogger.debug("Drawing data has changed, updating...");
-  //     try {
-  //       await browser.runtime.sendMessage(
-  //         As<SaveDrawingMessage>({
-  //           type: MessageType.UPDATE_DRAWING,
-  //           payload: {
-  //             id: currentId,
-  //             excalidraw: drawingDataState.excalidraw,
-  //             excalidrawState: drawingDataState.excalidrawState,
-  //             versionFiles: drawingDataState.versionFiles,
-  //             versionDataState: drawingDataState.versionDataState,
-  //             imageBase64: drawingDataState.imageBase64,
-  //             viewBackgroundColor: drawingDataState.viewBackgroundColor,
-  //             hash: newDataHash,
-  //           },
-  //         })
-  //       );
-  //     } catch (error) {
-  //       XLogger.error(
-  //         "[Listen Changes] Error sending drawing data to save",
-  //         error
-  //       );
-  //     }
-  //   }
-  // }, 2000);
-  // window.addEventListener("beforeunload", () => {
-  //   try {
-  //     clearInterval(intervalId);
-  //   } catch {}
-  // });
+  intervalId = window.setInterval(async () => {
+    const currentVersionFiles = localStorage.getItem("version-files");
+    const currentId = localStorage.getItem(DRAWING_ID_KEY_LS);
+    if (currentId && prevVersionFiles !== currentVersionFiles) {
+      prevVersionFiles = currentVersionFiles;
+      const currentDrawing = await DrawingStore.findDrawingById(currentId);
+      if (!currentDrawing) {
+        XLogger.error("No current drawing found");
+        return;
+      }
+      const drawingDataState = await getDrawingDataState();
+      const newDrawingFileData: IDrawingExport = {
+        elements: JSON.parse(drawingDataState.excalidraw),
+        version: 2,
+        type: "excalidraw",
+        source: "https://excalidraw.com",
+        appState: {
+          gridSize: null,
+          viewBackgroundColor: drawingDataState.viewBackgroundColor,
+        },
+        excalisave: {
+          id: currentId,
+          createdAt: currentDrawing?.createdAt,
+          imageBase64: currentDrawing?.imageBase64,
+          name: currentDrawing?.name,
+        },
+        files: {}, // TODO: Missing
+      };
+      const newDataHash = await hashJSON(newDrawingFileData);
+      const hasDataChanged = newDataHash !== currentDrawing?.hash;
+      if (!hasDataChanged) {
+        XLogger.debug("No changes in the drawing");
+        return;
+      }
+      XLogger.debug("Drawing data has changed, updating...");
+      try {
+        await browser.runtime.sendMessage(
+          As<SaveDrawingMessage>({
+            type: MessageType.UPDATE_DRAWING,
+            payload: {
+              id: currentId,
+              excalidraw: drawingDataState.excalidraw,
+              excalidrawState: drawingDataState.excalidrawState,
+              versionFiles: drawingDataState.versionFiles,
+              versionDataState: drawingDataState.versionDataState,
+              imageBase64: drawingDataState.imageBase64,
+              viewBackgroundColor: drawingDataState.viewBackgroundColor,
+              hash: newDataHash,
+            },
+          })
+        );
+      } catch (error) {
+        XLogger.error(
+          "[Listen Changes] Error sending drawing data to save",
+          error
+        );
+      }
+    }
+  }, 2000);
+
+  window.addEventListener("beforeunload", () => {
+    try {
+      clearInterval(intervalId);
+    } catch {}
+  });
+
   // Start syncing after 5 seconds
 }, 5000);
 
