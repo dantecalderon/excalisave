@@ -7,3 +7,7 @@ export interface GoogleUserMe {
   picture: string;
   verified_email: boolean;
 }
+
+export interface GoogleModifyFileResponse {
+  modifiedTime?: string;
+}

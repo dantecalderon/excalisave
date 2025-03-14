@@ -308,7 +308,7 @@ const Popup: React.FC = () => {
           SearchComponent={
             <TextField.Root
               style={{
-                width: "183px",
+                width: "177px",
               }}
             >
               <TextField.Slot>

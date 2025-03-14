@@ -31,7 +31,6 @@ const CalloutText = Callout.Text as any;
 
 type NavBarProps = {
   SearchComponent: ReactElement;
-  CurrentItemButton?: ReactElement;
   onCreateNewDrawing: (name: string) => void;
   onNewDrawing: () => void;
   onSaveDrawing: () => void;
@@ -41,11 +40,7 @@ type NavBarProps = {
   isLiveCollaboration: boolean;
 };
 
-export function NavBar({
-  SearchComponent,
-  CurrentItemButton,
-  ...props
-}: NavBarProps) {
+export function NavBar({ SearchComponent, ...props }: NavBarProps) {
   const [name, setName] = useState("");
   const [duplicateName, setDuplicateName] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -84,11 +79,21 @@ export function NavBar({
     props?.onCreateNewDrawing(duplicateName);
   };
 
+  const hasUnsavedChanges = (): boolean => {
+    if (!props.currentDrawing || !userInfo) return false;
+
+    if (!props.currentDrawing.lastModified) return true;
+    return props.currentDrawing.lastModified !== props.currentDrawing.lastSync;
+  };
+
+  const unsavedChanges = hasUnsavedChanges();
+
   return (
     <Flex
       width="100%"
       top="0"
       p="3"
+      gap="2"
       justify="between"
       align="center"
       style={{
@@ -98,22 +103,24 @@ export function NavBar({
       }}
     >
       {SearchComponent}
-      {CurrentItemButton}
       {props.currentDrawing && (
         <Flex
           style={{
             padding: "2px 10px",
-            background: "rgb(48 164 108)",
+            background: "#d7d9fc",
             color: "white",
-            border: "1px solid #2b9160",
-            width: "200px",
+            width: "180px",
             borderRadius: "5px",
           }}
+          grow={"1"}
           align={"center"}
           justify={"center"}
           direction={"column"}
         >
-          <Text size={"1"} style={{ fontSize: "10px", lineHeight: 1 }}>
+          <Text
+            size={"1"}
+            style={{ fontSize: "10px", lineHeight: 1, color: "black" }}
+          >
             {props.isLoading ? "Loading... " : "Working on:"}
           </Text>
           <Text
@@ -123,6 +130,7 @@ export function NavBar({
               lineHeight: "1.4",
               textOverflow: "ellipsis",
               overflow: "hidden",
+              color: "#6364cf",
               textAlign: "center",
               whiteSpace: "nowrap",
             }}
@@ -135,36 +143,50 @@ export function NavBar({
 
       {/* -------- OPTIONS MENU ---------  */}
       <DropdownMenu.Root>
-        <Flex className="Navbar__ActionButton">
-          <Button
-            disabled={
-              !props.inExcalidrawPage ||
-              props.isLoading ||
-              props.isLiveCollaboration
-            }
-            onClick={() => {
-              if (props.currentDrawing) {
-                props.onSaveDrawing();
-              } else {
-                setIsCreateDialogOpen(true);
+        <Flex>
+          <Flex className="Navbar__ActionButton">
+            <Button
+              disabled={
+                !props.inExcalidrawPage ||
+                props.isLoading ||
+                props.isLiveCollaboration ||
+                !unsavedChanges
               }
-            }}
-            value={"soft"}
-          >
-            {userInfo && <GoogleDriveIcon />}
-            {props.currentDrawing ? "Save" : "Save As..."}
-          </Button>
-          <DropdownMenu.Trigger
-            disabled={
-              !props.inExcalidrawPage ||
-              props.isLoading ||
-              props.isLiveCollaboration
-            }
-          >
-            <IconButton>
-              <CaretDownIcon width="18" height="18" />
-            </IconButton>
-          </DropdownMenu.Trigger>
+              onClick={() => {
+                if (props.currentDrawing) {
+                  props.onSaveDrawing();
+                } else {
+                  setIsCreateDialogOpen(true);
+                }
+              }}
+              style={{
+                background: unsavedChanges ? "#15a661" : undefined,
+              }}
+            >
+              {userInfo && <GoogleDriveIcon />}
+              {props.currentDrawing ? "Save" : "Save As..."}
+            </Button>
+            {unsavedChanges && (
+              <Text
+                color="gray"
+                className="Navbar__ActionButton__UnsavedChanges"
+              >
+                <InfoCircledIcon width={"10"} height={"10"} />
+                Unsaved changes
+              </Text>
+            )}
+            <DropdownMenu.Trigger
+              disabled={
+                !props.inExcalidrawPage ||
+                props.isLoading ||
+                props.isLiveCollaboration
+              }
+            >
+              <IconButton color="gray" variant="outline">
+                <CaretDownIcon width="18" height="18" />
+              </IconButton>
+            </DropdownMenu.Trigger>
+          </Flex>
 
           <DropdownMenu.Root>
             <Flex gap="2" pl="1">

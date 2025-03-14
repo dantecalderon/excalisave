@@ -2,6 +2,8 @@ import { browser } from "webextension-polyfill-ts";
 import { XLogger } from "./logger";
 import { IDrawingExport } from "../interfaces/drawing-export.interface";
 import axios from "redaxios";
+import { GoogleModifyFileResponse } from "../interfaces/google.interface";
+import { isValidDateString } from "./utils/date.utils";
 
 const BASE_URL = "https://www.googleapis.com";
 
@@ -177,6 +179,7 @@ export class GoogleDriveApi {
       XLogger.error("Error saving file to drive", error);
       console.error(error);
       // throw new Error("Failed to save file to drive");
+      return undefined;
     }
   }
 
@@ -207,13 +210,17 @@ export class GoogleDriveApi {
     return response.json();
   }
 
-  static async modifyFile(token: string, fileId: string, file: IDrawingExport) {
+  static async modifyFile(
+    token: string,
+    fileId: string,
+    file: IDrawingExport
+  ): Promise<GoogleModifyFileResponse> {
     // Then upload the actual file content using the /upload endpoint
     const fileContent = JSON.stringify(file);
     const uploadResponse = await fetch(
       "https://www.googleapis.com/upload/drive/v3/files/" +
         fileId +
-        "?uploadType=media",
+        "?uploadType=media&fields=modifiedTime",
       {
         method: "PATCH",
         headers: {
@@ -230,9 +237,14 @@ export class GoogleDriveApi {
       );
     }
 
-    const uploadData = await uploadResponse.json();
-    XLogger.info("Uploaded file content to drive", uploadData);
+    const response = await uploadResponse.json();
 
-    return uploadData;
+    XLogger.info("Uploaded file content to drive", response);
+
+    if (!isValidDateString(response?.modifiedTime)) {
+      return {};
+    }
+
+    return response;
   }
 }

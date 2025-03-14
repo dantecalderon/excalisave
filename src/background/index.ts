@@ -78,6 +78,7 @@ browser.runtime.onMessage.addListener(
               message.payload.viewBackgroundColor ||
               exitentDrawing.viewBackgroundColor,
             hash: message.payload.hash || exitentDrawing.hash,
+            lastModified: new Date().toISOString(),
             data: {
               excalidraw: message.payload.excalidraw,
               excalidrawState: message.payload.excalidrawState,
@@ -92,7 +93,7 @@ browser.runtime.onMessage.addListener(
 
           if (message.payload.saveToCloud) {
             XLogger.log("Saving to cloud", message.payload.id);
-            await GoogleDriveApi.saveFileToDrive({
+            const saveResponse = await GoogleDriveApi.saveFileToDrive({
               elements: JSON.parse(newData.data.excalidraw),
               version: 2,
               type: "excalidraw",
@@ -107,6 +108,16 @@ browser.runtime.onMessage.addListener(
               files: {},
             });
             XLogger.log("Saved to cloud", message.payload.id);
+
+            if (saveResponse.modifiedTime) {
+              await browser.storage.local.set({
+                [message.payload.id]: {
+                  ...newData,
+                  lastSync: saveResponse.modifiedTime,
+                  lastModified: saveResponse.modifiedTime,
+                },
+              });
+            }
           }
           break;
 
@@ -192,7 +203,7 @@ browser.runtime.onMessage.addListener(
 
           break;
 
-        case "MessageAutoSave":
+        case MessageType.AUTO_SAVE:
           const name = message.payload.name;
           const setCurrent = message.payload.setCurrent;
           XLogger.log("Saving new drawing", { name });
