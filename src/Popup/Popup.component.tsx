@@ -32,6 +32,8 @@ import { useFavorites } from "./hooks/useFavorites.hook";
 import { useFolders } from "./hooks/useFolders.hook";
 import { useRestorePoint } from "./hooks/useRestorePoint.hook";
 import "./Popup.styles.scss";
+import { GoogleDriveApi } from "../lib/google-drive-api";
+import { GoogleUserMe } from "../interfaces/google.interface";
 
 const Popup: React.FC = () => {
   const [drawings, setDrawings] = React.useState<IDrawing[]>([]);
@@ -60,6 +62,7 @@ const Popup: React.FC = () => {
   const { loading, startLoading } = useDrawingLoading();
   const [isConfirmSwitchDialogOpen, setIsConfirmSwitchDialogOpen] =
     useState<boolean>(false);
+  const [userInfo, setUserInfo] = useState<GoogleUserMe | null>(null);
 
   useEffect(() => {
     getRestorePoint()
@@ -69,9 +72,26 @@ const Popup: React.FC = () => {
         }
 
         setSidebarSelected(restorePoint?.sidebarSelected || "All");
+
+        if (!userInfo?.email) {
+          setUserInfo(
+            restorePoint?.profileUrl
+              ? {
+                  picture: restorePoint.profileUrl,
+                  id: "",
+                  email: "",
+                  family_name: "",
+                  given_name: "",
+                  name: "",
+                  verified_email: false,
+                }
+              : null
+          );
+        }
       })
       .catch(() => {
         setSidebarSelected("All");
+        setUserInfo(null);
       });
 
     const loadDrawings = async () => {
@@ -85,7 +105,17 @@ const Popup: React.FC = () => {
       setDrawings(newDrawings);
     };
 
-    loadDrawings();
+    const getUserInfo = async () => {
+      try {
+        const userInfo = await GoogleDriveApi.getAuthenticatedUser();
+        setUserInfo(userInfo);
+      } catch (error) {
+        XLogger.error("Error loading user");
+        setUserInfo(null);
+      }
+    };
+
+    Promise.allSettled([getUserInfo(), loadDrawings()]);
 
     // This allows updating the screenshot preview and other UI components,
     // if it was udpated after the first retrieval.
@@ -121,8 +151,9 @@ const Popup: React.FC = () => {
     setRestorePoint({
       searchTerm,
       sidebarSelected: sidebarSelected || "All",
+      profileUrl: userInfo?.picture,
     });
-  }, [searchTerm, sidebarSelected]);
+  }, [searchTerm, sidebarSelected, userInfo]);
 
   const onRenameDrawing = async (id: string, newName: string) => {
     try {
@@ -303,6 +334,14 @@ const Popup: React.FC = () => {
           isLoading={loading}
           inExcalidrawPage={inExcalidrawPage}
           currentDrawing={currentDrawing}
+          userInfo={userInfo}
+          onLogout={() => {
+            setRestorePoint({
+              searchTerm,
+              sidebarSelected: sidebarSelected || "All",
+              profileUrl: null,
+            });
+          }}
           isLiveCollaboration={isLiveCollaboration}
           onSaveDrawing={handleSaveCurrentDrawing}
           SearchComponent={

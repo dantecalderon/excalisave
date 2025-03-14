@@ -17,14 +17,13 @@ import {
   TextField,
 } from "@radix-ui/themes";
 import React, { ReactElement, useEffect, useState } from "react";
-import { IDrawing } from "../../interfaces/drawing.interface";
-import "./Navbar.styles.scss";
-import { DrawingStore } from "../../lib/drawing-store";
 import { browser } from "webextension-polyfill-ts";
+import { IDrawing } from "../../interfaces/drawing.interface";
+import { DrawingStore } from "../../lib/drawing-store";
 import { GoogleDriveApi } from "../../lib/google-drive-api";
-import { XLogger } from "../../lib/logger";
-import { GoogleUserMe } from "../../interfaces/google.interface";
 import { GoogleDriveIcon } from "../Icons/GDrive.icon";
+import "./Navbar.styles.scss";
+import { GoogleUserMe } from "../../interfaces/google.interface";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -34,10 +33,12 @@ type NavBarProps = {
   onCreateNewDrawing: (name: string) => void;
   onNewDrawing: () => void;
   onSaveDrawing: () => void;
+  onLogout: () => void;
   currentDrawing?: IDrawing;
   isLoading: boolean;
   inExcalidrawPage: boolean;
   isLiveCollaboration: boolean;
+  userInfo?: GoogleUserMe;
 };
 
 export function NavBar({ SearchComponent, ...props }: NavBarProps) {
@@ -46,22 +47,6 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [userInfo, setUserInfo] = useState<GoogleUserMe | null>(null);
-
-  useEffect(() => {
-    async function getUserInfo() {
-      try {
-        const userInfo = await GoogleDriveApi.getAuthenticatedUser();
-        setUserInfo(userInfo);
-      } catch (error) {
-        XLogger.error("Error loading user");
-      }
-    }
-
-    getUserInfo();
-  }, []);
-
-  console.log(userInfo);
 
   useEffect(() => {
     if (props.currentDrawing) {
@@ -80,7 +65,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
   };
 
   const hasUnsavedChanges = (): boolean => {
-    if (!props.currentDrawing || !userInfo) return false;
+    if (!props.currentDrawing || !props.userInfo) return false;
 
     if (!props.currentDrawing.lastModified) return true;
     return props.currentDrawing.lastModified !== props.currentDrawing.lastSync;
@@ -163,7 +148,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                 background: unsavedChanges ? "#15a661" : undefined,
               }}
             >
-              {userInfo && <GoogleDriveIcon />}
+              {props.userInfo && <GoogleDriveIcon />}
               {props.currentDrawing ? "Save" : "Save As..."}
             </Button>
             {unsavedChanges && (
@@ -190,7 +175,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
 
           <DropdownMenu.Root>
             <Flex gap="2" pl="1">
-              {userInfo ? (
+              {props.userInfo ? (
                 <DropdownMenu.Trigger
                   disabled={
                     !props.inExcalidrawPage ||
@@ -201,7 +186,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                   <Avatar
                     style={{ cursor: "pointer" }}
                     radius="full"
-                    src={userInfo?.picture}
+                    src={props.userInfo?.picture}
                     fallback="A"
                     size={"2"}
                   />
@@ -229,7 +214,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                   color: "var(--gray-12)",
                 }}
               >
-                <b>{userInfo?.name}</b>
+                <b>{props.userInfo?.name}</b>
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 disabled
@@ -237,7 +222,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                   color: "var(--gray-12)",
                 }}
               >
-                {userInfo?.email}
+                {props.userInfo?.email}
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
               <DropdownMenu.Item
