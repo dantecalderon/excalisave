@@ -2,15 +2,10 @@ import {
   BookmarkIcon,
   Cross1Icon,
   CrossCircledIcon,
-  ExclamationTriangleIcon,
   HeartFilledIcon,
-  InfoCircledIcon,
   MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
 import {
-  Button,
-  Callout,
-  Dialog,
   Flex,
   Grid,
   IconButton,
@@ -28,17 +23,15 @@ import { Sidebar } from "../components/Sidebar/Sidebar.component";
 import { IDrawing } from "../interfaces/drawing.interface";
 import { DrawingStore } from "../lib/drawing-store";
 import { XLogger } from "../lib/logger";
+import { checkAndPerformUnusedFilesCleanup } from "../lib/utils/cleanup-unused-files.util";
 import { TabUtils } from "../lib/utils/tab.utils";
+import { ConfirmSwitchDialog } from "./components/ConfirmSwithDialog.comonent";
 import { useCurrentDrawingId } from "./hooks/useCurrentDrawing.hook";
 import { useDrawingLoading } from "./hooks/useDrawingLoading.hook";
 import { useFavorites } from "./hooks/useFavorites.hook";
-import { useRestorePoint } from "./hooks/useRestorePoint.hook";
 import { useFolders } from "./hooks/useFolders.hook";
+import { useRestorePoint } from "./hooks/useRestorePoint.hook";
 import "./Popup.styles.scss";
-import { CleanupFilesMessage, MessageType } from "../constants/message.types";
-
-const DialogDescription = Dialog.Description as any;
-const CalloutText = Callout.Text as any;
 
 const Popup: React.FC = () => {
   const [drawings, setDrawings] = React.useState<IDrawing[]>([]);
@@ -94,8 +87,12 @@ const Popup: React.FC = () => {
 
     loadDrawings();
 
-    // This allows updating the screenshot preview when popup is open to not wait until next time it's opened
-    const onDrawingChanged = async (changes: any, areaName: string) => {
+    // This allows updating the screenshot preview and other UI components,
+    // if it was udpated after the first retrieval.
+    const onDrawingChanged = async (
+      changes: Record<string, any>,
+      areaName: string
+    ) => {
       if (areaName !== "local") return;
 
       setDrawings((prevDrawings) => {
@@ -113,49 +110,7 @@ const Popup: React.FC = () => {
 
     browser.storage.onChanged.addListener(onDrawingChanged);
 
-    browser.storage.session
-      .get("lastFileCleanupDate")
-      .then(async ({ lastFileCleanupDate }) => {
-        const currentDate = new Date().getTime();
-
-        // Run cleanup process every 3 days
-        // Condition is checked every time popup is opened
-        const Ndays = 1000 * 60 * 60 * 24 * 3;
-        const hasPassedNDays = currentDate - lastFileCleanupDate > Ndays;
-        if (hasPassedNDays || !lastFileCleanupDate) {
-          XLogger.debug("N days passed. Cleaning up old files");
-
-          const activeTab = await TabUtils.getActiveTab();
-
-          XLogger.debug("Active tab", activeTab);
-          if (
-            !activeTab ||
-            !activeTab.url?.startsWith("https://excalidraw.com")
-          ) {
-            XLogger.error(
-              "Error loading drawing: No active tab or drawing found",
-              {
-                activeTab,
-              }
-            );
-
-            return;
-          }
-
-          await Promise.all([
-            browser.runtime.sendMessage({
-              type: MessageType.CLEANUP_FILES,
-              payload: {
-                tabId: activeTab.id,
-                executionTimestamp: currentDate,
-              },
-            } as CleanupFilesMessage),
-            browser.storage.session.set({
-              lastFileCleanupDate: currentDate,
-            }),
-          ]);
-        }
-      });
+    checkAndPerformUnusedFilesCleanup();
 
     return () => {
       browser.storage.onChanged.removeListener(onDrawingChanged);
@@ -467,71 +422,16 @@ const Popup: React.FC = () => {
               ))}
           </div>
         </Flex>
-
-        {/* -------- CONFIRM DIALOG ---------  */}
-        <Dialog.Root
+        <ConfirmSwitchDialog
           open={isConfirmSwitchDialogOpen}
-          onOpenChange={(isOpen) => setIsConfirmSwitchDialogOpen(isOpen)}
-        >
-          <Dialog.Content
-            style={{ maxWidth: 450, paddingTop: 22, paddingBottom: 20 }}
-            size="1"
-          >
-            <Dialog.Title size={"4"}>You have unsaved changes</Dialog.Title>
-
-            <DialogDescription>
-              <Callout.Root color="red">
-                <Callout.Icon>
-                  <ExclamationTriangleIcon />
-                </Callout.Icon>
-                <CalloutText>
-                  Data will be lost. Are you sure you want to continue?
-                </CalloutText>
-              </Callout.Root>
-              <br />
-              <Text
-                color="gray"
-                size="1"
-                style={{
-                  marginLeft: "5px",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                <InfoCircledIcon
-                  width="12"
-                  height="12"
-                  style={{ paddingRight: "5px" }}
-                />
-                You can click "Cancel" and save your changes before.
-              </Text>
-              <br />
-            </DialogDescription>
-
-            <Flex gap="3" mt="4" justify="end">
-              <Dialog.Close>
-                <Button variant="soft" color="gray">
-                  Cancel
-                </Button>
-              </Dialog.Close>
-              <Dialog.Close>
-                <Button
-                  color="red"
-                  onClick={() => {
-                    setIsConfirmSwitchDialogOpen(false);
-
-                    if (drawingIdToSwitch.current) {
-                      handleLoadItem(drawingIdToSwitch.current);
-                      drawingIdToSwitch.current = undefined;
-                    }
-                  }}
-                >
-                  Yes, continue
-                </Button>
-              </Dialog.Close>
-            </Flex>
-          </Dialog.Content>
-        </Dialog.Root>
+          onOpenChange={setIsConfirmSwitchDialogOpen}
+          onSucess={() => {
+            if (drawingIdToSwitch.current) {
+              handleLoadItem(drawingIdToSwitch.current);
+              drawingIdToSwitch.current = undefined;
+            }
+          }}
+        />
       </section>
     </Theme>
   );
