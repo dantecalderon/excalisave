@@ -294,7 +294,7 @@ const Popup: React.FC = () => {
 
   const showDrawings = () => {
     return (
-      <Grid columns="2" gapX="3" gapY="5" width="auto" pb="3" pt="3">
+      <Grid columns="2" gapY="20px" width="auto" pb="16px" pt="16px">
         {filteredDrawings.map((drawing, index) => (
           <Drawing
             key={drawing.id}

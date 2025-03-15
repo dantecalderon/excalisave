@@ -54,7 +54,7 @@ export function Drawing(props: DrawingProps) {
   };
 
   return (
-    <Box className="Drawing">
+    <div className="Drawing">
       <Flex direction="column" gap="2" position={"relative"}>
         <img
           className="Drawing__image"
@@ -233,6 +233,6 @@ export function Drawing(props: DrawingProps) {
           </Dialog.Root>
         </Flex>
       </Flex>
-    </Box>
+    </div>
   );
 }
