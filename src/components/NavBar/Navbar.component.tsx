@@ -209,7 +209,8 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                         setIsLogin(true);
                         await GoogleDriveApi.login();
                         setIsLogin(false);
-                        window.location.reload();
+
+                        window.close();
                       }}
                       radius="full"
                       color="blue"
