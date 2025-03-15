@@ -1,4 +1,5 @@
 import {
+  BookmarkIcon,
   CaretDownIcon,
   ClipboardIcon,
   ExclamationTriangleIcon,
@@ -47,6 +48,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isLogin, setIsLogin] = useState(false);
 
   useEffect(() => {
     if (props.currentDrawing) {
@@ -194,13 +196,19 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                 </DropdownMenu.Trigger>
               ) : (
                 <Button
+                  disabled={isLogin}
                   onClick={async () => {
+                    setIsLogin(true);
                     await GoogleDriveApi.login();
+                    setIsLogin(false);
                     window.location.reload();
                   }}
                   radius="full"
                   variant="surface"
                 >
+                  {/* <Spinner loading>
+                    <BookmarkIcon />
+                  </Spinner> */}
                   Log In
                 </Button>
               )}
