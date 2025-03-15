@@ -136,7 +136,7 @@ export function ImpExp() {
 
           await browser.scripting.executeScript({
             target: { tabId: excalidrawTab.id },
-            files: ["./js/execute-scripts/load-store.bundle.js"],
+            files: ["./js/execute-scripts/add-files-to-store.bundle.js"],
           });
 
           let favorites: string[] = dataJSON?.favorites || [];

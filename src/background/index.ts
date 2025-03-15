@@ -230,10 +230,14 @@ browser.runtime.onMessage.addListener(
 
           XLogger.log("Used fileIds", uniqueImagesUsed);
 
-          await runActionScript("delete-unused-files", message.payload.tabId, {
-            fileIds: uniqueImagesUsed,
-            executionTimestamp: message.payload.executionTimestamp,
-          });
+          await runActionScript(
+            "delete-unused-files-from-store",
+            message.payload.tabId,
+            {
+              fileIds: uniqueImagesUsed,
+              executionTimestamp: message.payload.executionTimestamp,
+            }
+          );
 
           break;
 

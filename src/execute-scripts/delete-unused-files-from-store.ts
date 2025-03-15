@@ -1,5 +1,7 @@
 /***
- * Deletes files that are not used in any drawing.
+ * Deletes files from the store that are not used in any drawing.
+ *
+ * store: IndexedDB store used by Excalidraw to load and persist file data.
  *
  * @param fileIds - The ids of the files that are being used and should not be deleted.
  * @param executionTimestamp - The timestamp when the script was run to avoid deleting files that were created after the script was run.
@@ -15,7 +17,7 @@ const filesStore = createStore("files-db", "files-store");
 
 (async () => {
   const params = getScriptParams<
-    ActionScriptParams["delete-unused-files"] | undefined
+    ActionScriptParams["delete-unused-files-from-store"] | undefined
   >();
 
   if (

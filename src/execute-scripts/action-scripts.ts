@@ -1,5 +1,4 @@
 import { browser } from "webextension-polyfill-ts";
-import { Optional } from "../lib/types.utils";
 
 // List of all action scripts with their params. The key is the filename without the extension.
 export type ActionScriptParams = {
@@ -10,11 +9,14 @@ export type ActionScriptParams = {
     // If true, the drawing will be saved to the cloud.
     saveToCloud?: boolean;
   };
-  "delete-unused-files": {
+  "delete-unused-files-from-store": {
     fileIds: string[];
     executionTimestamp: number;
   };
   "send-stored-files": undefined;
+  "switch-drawing": {
+    targetDrawingId: string;
+  };
 };
 
 /**

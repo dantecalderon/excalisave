@@ -24,11 +24,11 @@ const extensionReloaderPlugin = new ExtensionReloader({
   entries: {
     contentScript: [
       "execute-scripts/sendDrawingDataToSave",
-      "execute-scripts/loadDrawing",
+      "execute-scripts/switch-drawing",
       "execute-scripts/newDrawing",
       "execute-scripts/send-stored-files",
-      "execute-scripts/load-store",
-      "execute-scripts/delete-unused-files",
+      "execute-scripts/add-files-to-store",
+      "execute-scripts/delete-unused-files-from-store",
       "content-scripts/listenDrawingUpdates",
       "content-scripts/addOverwriteAction",
     ],
@@ -64,10 +64,10 @@ module.exports = {
       "execute-scripts",
       "send-drawing-data-to-save.ts"
     ),
-    "execute-scripts/loadDrawing": path.join(
+    "execute-scripts/switch-drawing": path.join(
       sourcePath,
       "execute-scripts",
-      "loadDrawing.ts"
+      "switch-drawing.ts"
     ),
     "execute-scripts/newDrawing": path.join(
       sourcePath,
@@ -79,15 +79,15 @@ module.exports = {
       "execute-scripts",
       "send-stored-files.ts"
     ),
-    "execute-scripts/delete-unused-files": path.join(
+    "execute-scripts/delete-unused-files-from-store": path.join(
       sourcePath,
       "execute-scripts",
-      "delete-unused-files.ts"
+      "delete-unused-files-from-store.ts"
     ),
-    "execute-scripts/load-store": path.join(
+    "execute-scripts/add-files-to-store": path.join(
       sourcePath,
       "execute-scripts",
-      "load-store.ts"
+      "add-files-to-store.ts"
     ),
     "content-scripts/listenDrawingUpdates": path.join(
       sourcePath,

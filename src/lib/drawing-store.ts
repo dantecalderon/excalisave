@@ -66,18 +66,8 @@ export class DrawingStore {
       return;
     }
 
-    // This workaround is to pass params to script, it's ugly but it works
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      func: (drawingId) => {
-        window.__SCRIPT_PARAMS__ = { id: drawingId };
-      },
-      args: [drawingId],
-    });
-
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      files: ["./js/execute-scripts/loadDrawing.bundle.js"],
+    await runActionScript("switch-drawing", activeTab.id, {
+      targetDrawingId: drawingId,
     });
   }
 
