@@ -6,6 +6,7 @@ export enum MessageType {
   SAVE_NEW_DRAWING = "SAVE_NEW_DRAWING",
   UPDATE_DRAWING = "UPDATE_DRAWING",
   RENAME_DRAWING = "RENAME_DRAWING",
+  DELETE_DRAWING = "DELETE_DRAWING",
   EXPORT_STORE = "EXPORT_STORE",
   CLEANUP_FILES = "CLEANUP_FILES",
   CLEAR_DRAWING_ID = "ClearDrawingID",
@@ -50,6 +51,13 @@ export type SaveDrawingMessage = {
     imageBase64?: DrawingDataState["imageBase64"];
     viewBackgroundColor?: DrawingDataState["viewBackgroundColor"];
     hash?: string;
+  }>;
+};
+
+export type DeleteDrawingMessage = {
+  type: MessageType.DELETE_DRAWING;
+  payload: WithSaveToCloud<{
+    id: string;
   }>;
 };
 

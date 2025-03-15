@@ -2,6 +2,7 @@ import { browser } from "webextension-polyfill-ts";
 import {
   AutoSaveMessage,
   CleanupFilesMessage,
+  DeleteDrawingMessage,
   MessageType,
   RenameDrawingMessage,
   SaveDrawingMessage,
@@ -12,6 +13,8 @@ import { XLogger } from "../lib/logger";
 import { TabUtils } from "../lib/utils/tab.utils";
 import { RandomUtils } from "../lib/utils/random.utils";
 import { GoogleDriveApi } from "../lib/google-drive-api";
+import { IDrawingExport } from "../interfaces/drawing-export.interface";
+import { hashJSON } from "../lib/utils/json.utils";
 
 browser.runtime.onInstalled.addListener(async () => {
   XLogger.log("onInstalled...");
@@ -33,6 +36,7 @@ browser.runtime.onMessage.addListener(
       | SaveNewDrawingMessage
       | CleanupFilesMessage
       | RenameDrawingMessage
+      | DeleteDrawingMessage
       | AutoSaveMessage,
     _sender: any
   ) => {
@@ -60,65 +64,97 @@ browser.runtime.onMessage.addListener(
           break;
 
         case MessageType.UPDATE_DRAWING:
-          const exitentDrawing = (
+          const currentDrawing = (
             await browser.storage.local.get(message.payload.id)
           )[message.payload.id] as IDrawing;
 
-          if (!exitentDrawing) {
+          if (!currentDrawing) {
             XLogger.error("No drawing found with id", message.payload.id);
             return;
           }
 
-          const newData: IDrawing = {
-            ...exitentDrawing,
-            name: message.payload.name || exitentDrawing.name,
-            imageBase64:
-              message.payload.imageBase64 || exitentDrawing.imageBase64,
-            viewBackgroundColor:
-              message.payload.viewBackgroundColor ||
-              exitentDrawing.viewBackgroundColor,
-            hash: message.payload.hash || exitentDrawing.hash,
-            lastModified: new Date().toISOString(),
-            data: {
-              excalidraw: message.payload.excalidraw,
-              excalidrawState: message.payload.excalidrawState,
-              versionFiles: message.payload.versionFiles,
-              versionDataState: message.payload.versionDataState,
+          // This is used to compare changes in the drawing with the current drawing
+          const newDrawingHashData: IDrawingExport = {
+            elements: JSON.parse(message.payload.excalidraw),
+            version: 2,
+            type: "excalidraw",
+            source: "https://excalidraw.com",
+            appState: {
+              gridSize: null,
+              viewBackgroundColor: message.payload.viewBackgroundColor,
             },
+            excalisave: {
+              id: message.payload.id,
+              createdAt: currentDrawing?.createdAt,
+              imageBase64:
+                message.payload?.imageBase64 || currentDrawing?.imageBase64,
+              name: currentDrawing?.name,
+            },
+            files: {}, // Files are not needed to compare changes. Since it has
           };
 
-          await browser.storage.local.set({
-            [message.payload.id]: newData,
-          });
+          const newDrawingHash = await hashJSON(newDrawingHashData);
+
+          if (newDrawingHash !== currentDrawing.hash) {
+            const newDrawing: IDrawing = {
+              ...currentDrawing,
+              name: message.payload.name || currentDrawing.name,
+              imageBase64:
+                message.payload.imageBase64 || currentDrawing.imageBase64,
+              viewBackgroundColor:
+                message.payload.viewBackgroundColor ||
+                currentDrawing.viewBackgroundColor,
+              hash: newDrawingHash,
+              lastModified: new Date().toISOString(),
+              data: {
+                excalidraw: message.payload.excalidraw,
+                excalidrawState: message.payload.excalidrawState,
+                versionFiles: message.payload.versionFiles,
+                versionDataState: message.payload.versionDataState,
+              },
+            };
+
+            await browser.storage.local.set({
+              [message.payload.id]: newDrawing,
+            });
+          }
 
           if (message.payload.saveToCloud) {
             XLogger.log("Saving to cloud", message.payload.id);
             const saveResponse = await GoogleDriveApi.saveFileToDrive({
-              elements: JSON.parse(newData.data.excalidraw),
+              elements: newDrawingHashData.elements,
               version: 2,
               type: "excalidraw",
               source: "https://excalidraw.com",
-              appState: JSON.parse(newData.data.excalidrawState),
+              appState: newDrawingHashData.appState,
               excalisave: {
-                createdAt: exitentDrawing.createdAt,
-                id: exitentDrawing.id,
-                name: exitentDrawing.name,
-                imageBase64: exitentDrawing.imageBase64,
+                createdAt: currentDrawing.createdAt,
+                id: currentDrawing.id,
+                name: currentDrawing.name,
+                imageBase64:
+                  message.payload.imageBase64 || currentDrawing.imageBase64,
               },
+              // TODO: Include files:
               files: {},
             });
+
             XLogger.log("Saved to cloud", message.payload.id);
 
             if (saveResponse.modifiedTime) {
+              const currentDrawing = (
+                await browser.storage.local.get(message.payload.id)
+              )[message.payload.id] as IDrawing;
+
               await browser.storage.local.set({
                 [message.payload.id]: {
-                  ...newData,
+                  ...currentDrawing,
                   lastSync: saveResponse.modifiedTime,
                   lastModified: saveResponse.modifiedTime,
-                },
+                } as IDrawing,
               });
             }
           }
+
           break;
 
         case MessageType.RENAME_DRAWING:
@@ -161,6 +197,14 @@ browser.runtime.onMessage.addListener(
             );
 
             XLogger.log("Renamed file in cloud");
+          }
+
+          break;
+
+        case MessageType.DELETE_DRAWING:
+          XLogger.log("Deleting drawing", message.payload.id);
+          if (message.payload.saveToCloud) {
+            await GoogleDriveApi.deleteFile(message.payload.id);
           }
 
           break;

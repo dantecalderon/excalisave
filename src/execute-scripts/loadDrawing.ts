@@ -29,26 +29,8 @@ type ScriptParams = {
     return;
   }
 
-  // To avoid images being removed by cleanup process,
-  // update the lastRetrived date of other drawings when load the new drawing.
-  await entries(filesStore).then((entries) => {
-    for (const [id, imageData] of entries as [FileId, BinaryFileData][]) {
-      set(
-        id,
-        {
-          ...imageData,
-          // Dear future developer (if humanity persists), kindly update this before the year 2400
-          lastRetrieved: new Date(2400, 0, 1).getTime(),
-        },
-        filesStore
-      );
-    }
-  });
-
   // Save data before load new drawing if there is a current drawing
   const currentDrawingId = localStorage.getItem(DRAWING_ID_KEY_LS);
-
-  const url = new URL(window.location.href);
 
   if (currentDrawingId) {
     XLogger.info("Saving current drawing before load new drawing");
@@ -70,10 +52,9 @@ type ScriptParams = {
     );
   }
 
-  // Load new drawing
-  const response = await browser.storage.local.get(loadDrawingId);
-
-  const drawingData = response[loadDrawingId] as IDrawing;
+  const drawingData = (await browser.storage.local.get(loadDrawingId))[
+    loadDrawingId
+  ] as IDrawing;
 
   if (!drawingData) {
     XLogger.error("No drawing data found");
@@ -94,6 +75,24 @@ type ScriptParams = {
     localStorage.setItem("version-dataState", versionDataState);
     localStorage.setItem(DRAWING_ID_KEY_LS, loadDrawingId);
   });
+
+  // To avoid images being removed by cleanup process,
+  // update the lastRetrived date of other drawings when load the new drawing.
+  await entries(filesStore).then((entries) => {
+    for (const [id, imageData] of entries as [FileId, BinaryFileData][]) {
+      set(
+        id,
+        {
+          ...imageData,
+          // Dear future developer (if humanity persists), kindly update this before the year 2400
+          lastRetrieved: new Date(2400, 0, 1).getTime(),
+        },
+        filesStore
+      );
+    }
+  });
+
+  const url = new URL(window.location.href);
 
   // Reload page in origin url to ensure load localStorage data.
   location.assign(url.origin);

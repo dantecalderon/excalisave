@@ -5,7 +5,11 @@ import { DRAWING_ID_KEY_LS } from "./constants";
 import { XLogger } from "./logger";
 import { RandomUtils } from "./utils/random.utils";
 import { TabUtils } from "./utils/tab.utils";
-import { MessageType, RenameDrawingMessage } from "../constants/message.types";
+import {
+  DeleteDrawingMessage,
+  MessageType,
+  RenameDrawingMessage,
+} from "../constants/message.types";
 
 type SaveDrawingProps = {
   name: string;
@@ -140,6 +144,14 @@ export class DrawingStore {
     });
 
     await DrawingStore.deleteDrawingFromFavorites(id);
+
+    await browser.runtime.sendMessage({
+      type: MessageType.DELETE_DRAWING,
+      payload: {
+        id,
+        saveToCloud: true,
+      },
+    } as DeleteDrawingMessage);
   }
 
   static async hasUnsavedChanges(): Promise<boolean> {

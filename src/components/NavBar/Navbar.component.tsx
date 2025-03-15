@@ -144,9 +144,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                   setIsCreateDialogOpen(true);
                 }
               }}
-              style={{
-                background: unsavedChanges ? "#15a661" : undefined,
-              }}
+              color={unsavedChanges ? "green" : undefined}
             >
               {props.userInfo && <GoogleDriveIcon />}
               {props.currentDrawing ? "Save" : "Save As..."}

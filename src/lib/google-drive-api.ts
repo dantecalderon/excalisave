@@ -247,4 +247,40 @@ export class GoogleDriveApi {
 
     return response;
   }
+
+  static async deleteFile(localFileId: string): Promise<void> {
+    try {
+      const token = await GoogleDriveApi.getToken();
+
+      const cloudFile = await GoogleDriveApi.findByExcalisaveId(localFileId);
+
+      if (!cloudFile?.[0]?.id) {
+        XLogger.error("No cloud file found with id", localFileId);
+        return;
+      }
+
+      const response = await fetch(
+        `${BASE_URL}/drive/v3/files/${cloudFile[0].id}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            trashed: true,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to move  file '${localFileId}'`);
+      }
+
+      XLogger.info("Moved file to trash");
+    } catch (error) {
+      XLogger.error("Error deleting file", error);
+      throw new Error("Failed to delete file");
+    }
+  }
 }
