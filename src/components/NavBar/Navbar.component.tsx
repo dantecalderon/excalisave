@@ -1,30 +1,34 @@
 import {
-  BookmarkIcon,
   CaretDownIcon,
   ClipboardIcon,
+  EnterIcon,
   ExclamationTriangleIcon,
   FilePlusIcon,
   InfoCircledIcon,
 } from "@radix-ui/react-icons";
 import {
   Avatar,
+  Box,
   Button,
   Callout,
   Dialog,
   DropdownMenu,
+  Em,
   Flex,
+  HoverCard,
   IconButton,
+  Spinner,
   Text,
   TextField,
 } from "@radix-ui/themes";
 import React, { ReactElement, useEffect, useState } from "react";
 import { browser } from "webextension-polyfill-ts";
 import { IDrawing } from "../../interfaces/drawing.interface";
+import { GoogleUserMe } from "../../interfaces/google.interface";
 import { DrawingStore } from "../../lib/drawing-store";
 import { GoogleDriveApi } from "../../lib/google-drive-api";
 import { GoogleDriveIcon } from "../Icons/GDrive.icon";
 import "./Navbar.styles.scss";
-import { GoogleUserMe } from "../../interfaces/google.interface";
 
 const DialogDescription = Dialog.Description as any;
 const CalloutText = Callout.Text as any;
@@ -99,7 +103,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
             width: "180px",
             borderRadius: "5px",
           }}
-          grow={"1"}
+          flexGrow={"1"}
           align={"center"}
           justify={"center"}
           direction={"column"}
@@ -195,22 +199,53 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                   />
                 </DropdownMenu.Trigger>
               ) : (
-                <Button
-                  disabled={isLogin}
-                  onClick={async () => {
-                    setIsLogin(true);
-                    await GoogleDriveApi.login();
-                    setIsLogin(false);
-                    window.location.reload();
-                  }}
-                  radius="full"
-                  variant="surface"
+                <HoverCard.Root
+                  open={props.inExcalidrawPage && !isLogin ? undefined : false}
                 >
-                  {/* <Spinner loading>
-                    <BookmarkIcon />
-                  </Spinner> */}
-                  Log In
-                </Button>
+                  <HoverCard.Trigger>
+                    <Button
+                      disabled={isLogin || !props.inExcalidrawPage}
+                      onClick={async () => {
+                        setIsLogin(true);
+                        await GoogleDriveApi.login();
+                        setIsLogin(false);
+                        window.location.reload();
+                      }}
+                      radius="full"
+                      color="blue"
+                      variant="solid"
+                    >
+                      <Spinner loading={isLogin}>
+                        <EnterIcon />
+                      </Spinner>
+                      Log In
+                    </Button>
+                  </HoverCard.Trigger>
+                  <HoverCard.Content maxWidth="300px">
+                    <Flex gap="4">
+                      <Box>
+                        <Box
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            marginBottom: "12px",
+                          }}
+                        >
+                          <img
+                            width={"50px"}
+                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Google_Drive_icon_%282020%29.svg/269px-Google_Drive_icon_%282020%29.svg.png"
+                          />
+                        </Box>
+                        <Text as="div" size="2" align="center">
+                          <Em>
+                            Log in to save your drawings to <br />
+                            Google Drive.
+                          </Em>
+                        </Text>
+                      </Box>
+                    </Flex>
+                  </HoverCard.Content>
+                </HoverCard.Root>
               )}
             </Flex>
             <DropdownMenu.Content>
@@ -302,7 +337,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
           <Dialog.Title size={"4"}>Save new Drawing</Dialog.Title>
 
           <Flex direction="column" mt="3">
-            <TextField.Input
+            <TextField.Root
               onChange={(event) => {
                 setName(event.target.value);
               }}
@@ -343,7 +378,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
           <Dialog.Title size={"4"}>Duplicate Drawing</Dialog.Title>
 
           <Flex direction="column" mt="3">
-            <TextField.Input
+            <TextField.Root
               onChange={(event) => {
                 setDuplicateName(event.target.value);
               }}

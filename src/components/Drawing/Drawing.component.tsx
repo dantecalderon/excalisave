@@ -200,7 +200,7 @@ export function Drawing(props: DrawingProps) {
               </DialogDescription>
 
               <Flex direction="column" mt="3">
-                <TextField.Input
+                <TextField.Root
                   onChange={(event) => {
                     setNewName(event.target.value);
                   }}

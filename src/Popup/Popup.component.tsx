@@ -351,23 +351,20 @@ const Popup: React.FC = () => {
               style={{
                 width: "177px",
               }}
+              autoFocus
+              ref={searchInputRef}
+              value={searchTerm}
+              onChange={(event) => {
+                if (sidebarSelected !== "Results") {
+                  setSidebarSelected("Results");
+                }
+                setSearchTerm(event.target.value);
+              }}
+              placeholder="Search Drawing"
             >
               <TextField.Slot>
                 <MagnifyingGlassIcon height="16" width="16" />
               </TextField.Slot>
-              <TextField.Input
-                autoFocus
-                ref={searchInputRef}
-                value={searchTerm}
-                onChange={(event) => {
-                  if (sidebarSelected !== "Results") {
-                    setSidebarSelected("Results");
-                  }
-                  setSearchTerm(event.target.value);
-                }}
-                placeholder="Search Drawing"
-              />
-
               <TextField.Slot>
                 {searchTerm && (
                   <IconButton
