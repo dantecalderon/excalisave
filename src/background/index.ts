@@ -15,6 +15,7 @@ import { RandomUtils } from "../lib/utils/random.utils";
 import { GoogleDriveApi } from "../lib/google-drive-api";
 import { IDrawingExport } from "../interfaces/drawing-export.interface";
 import { hashJSON } from "../lib/utils/json.utils";
+import { runActionScript } from "../execute-scripts/action-scripts";
 
 browser.runtime.onInstalled.addListener(async () => {
   XLogger.log("onInstalled...");
@@ -210,7 +211,7 @@ browser.runtime.onMessage.addListener(
           break;
 
         case MessageType.CLEANUP_FILES:
-          XLogger.info("Cleaning up files");
+          XLogger.info("Cleaning up unused files...");
 
           const drawings = Object.values(
             await browser.storage.local.get()
@@ -219,7 +220,7 @@ browser.runtime.onMessage.addListener(
           const imagesUsed = drawings
             .map((drawing) => {
               return JSON.parse(drawing.data.excalidraw).filter(
-                (item: any) => item.type === "image"
+                (item: any) => item.type === "image" && item.fileId
               );
             })
             .flat()
@@ -229,20 +230,9 @@ browser.runtime.onMessage.addListener(
 
           XLogger.log("Used fileIds", uniqueImagesUsed);
 
-          // This workaround is to pass params to script, it's ugly but it works
-          await browser.scripting.executeScript({
-            target: {
-              tabId: message.payload.tabId,
-            },
-            func: (fileIds: string[], executionTimestamp: number) => {
-              window.__SCRIPT_PARAMS__ = { fileIds, executionTimestamp };
-            },
-            args: [uniqueImagesUsed, message.payload.executionTimestamp],
-          });
-
-          await browser.scripting.executeScript({
-            target: { tabId: message.payload.tabId },
-            files: ["./js/execute-scripts/delete-unused-files.bundle.js"],
+          await runActionScript("delete-unused-files", message.payload.tabId, {
+            fileIds: uniqueImagesUsed,
+            executionTimestamp: message.payload.executionTimestamp,
           });
 
           break;

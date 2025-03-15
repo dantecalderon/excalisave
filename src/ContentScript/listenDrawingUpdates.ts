@@ -44,9 +44,10 @@ timeoutId = window.setTimeout(() => {
         return;
       }
 
-      XLogger.debug("Sending drawing data to save (if changed).");
-      const drawingDataState = await getDrawingDataState();
       try {
+        const drawingDataState = await getDrawingDataState();
+
+        XLogger.debug("Sending drawing data to save (if changed).");
         await browser.runtime.sendMessage(
           As<SaveDrawingMessage>({
             type: MessageType.UPDATE_DRAWING,

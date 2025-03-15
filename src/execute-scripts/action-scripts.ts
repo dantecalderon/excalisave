@@ -10,6 +10,11 @@ export type ActionScriptParams = {
     // If true, the drawing will be saved to the cloud.
     saveToCloud?: boolean;
   };
+  "delete-unused-files": {
+    fileIds: string[];
+    executionTimestamp: number;
+  };
+  "send-stored-files": undefined;
 };
 
 /**

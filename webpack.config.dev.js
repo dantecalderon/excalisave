@@ -26,7 +26,7 @@ const extensionReloaderPlugin = new ExtensionReloader({
       "execute-scripts/sendDrawingDataToSave",
       "execute-scripts/loadDrawing",
       "execute-scripts/newDrawing",
-      "execute-scripts/export-store",
+      "execute-scripts/send-stored-files",
       "execute-scripts/load-store",
       "execute-scripts/delete-unused-files",
       "content-scripts/listenDrawingUpdates",
@@ -74,10 +74,10 @@ module.exports = {
       "execute-scripts",
       "newDrawing.ts"
     ),
-    "execute-scripts/export-store": path.join(
+    "execute-scripts/send-stored-files": path.join(
       sourcePath,
       "execute-scripts",
-      "export-store.ts"
+      "send-stored-files.ts"
     ),
     "execute-scripts/delete-unused-files": path.join(
       sourcePath,

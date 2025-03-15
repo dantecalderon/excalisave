@@ -1,3 +1,10 @@
+/**
+ * Fetches stored files from IndexedDB and sends them via a runtime message (`MessageType.EXPORT_STORE`).
+ *
+ * Listeners can receive the message using `MessageType.EXPORT_STORE`.
+ *
+ * This is used by the `ImpExp` component to export the files store, which launches a new tab, that's why it closes the current tab after sending the message.
+ */
 import { BinaryFileData } from "@excalidraw/excalidraw/types/types";
 import { createStore, values } from "idb-keyval";
 import { browser } from "webextension-polyfill-ts";

@@ -1,18 +1,22 @@
+/***
+ * Deletes files that are not used in any drawing.
+ *
+ * @param fileIds - The ids of the files that are being used and should not be deleted.
+ * @param executionTimestamp - The timestamp when the script was run to avoid deleting files that were created after the script was run.
+ */
 import { BinaryFileData } from "@excalidraw/excalidraw/types/types";
 import { createStore, del, get, keys } from "idb-keyval";
 import { getScriptParams } from "../ContentScript/content-script.utils";
 import { XLogger } from "../lib/logger";
+import { ActionScriptParams } from "./action-scripts";
 
 // Were images are stored: https://github.com/excalidraw/excalidraw/blob/e8def8da8d5fcf9445aebdd996de3fee4cecf7ef/excalidraw-app/data/LocalData.ts#L24
 const filesStore = createStore("files-db", "files-store");
 
-type ScriptParams = {
-  fileIds: string[];
-  executionTimestamp: number;
-};
-
 (async () => {
-  const params = getScriptParams<ScriptParams | undefined>();
+  const params = getScriptParams<
+    ActionScriptParams["delete-unused-files"] | undefined
+  >();
 
   if (
     !params ||
@@ -25,7 +29,7 @@ type ScriptParams = {
     return;
   }
 
-  XLogger.debug("Removing unused files", {
+  XLogger.debug("Deleting unused files", {
     usedFileIds: params.fileIds,
     executionTimestamp: params.executionTimestamp,
   });
@@ -33,24 +37,25 @@ type ScriptParams = {
   const usedFileIds = params.fileIds;
   const fileKeys = await keys(filesStore);
 
-  fileKeys.forEach(async (key) => {
-    // Skip if the file is used
-    if (usedFileIds.includes(key.toString())) {
-      return;
-    }
+  await Promise.allSettled(
+    fileKeys.map(async (key) => {
+      const isFileBeingUsed = usedFileIds.includes(key.toString());
 
-    const file = await get<BinaryFileData>(key, filesStore);
-    XLogger.debug("Checking file if it's unused", {
-      file,
-    });
+      // Skip if the file is being used
+      if (isFileBeingUsed) {
+        return;
+      }
 
-    // Skipt deletion if file was created after the execution timestamp
-    if (file.created > params.executionTimestamp) {
-      return;
-    }
+      const file = await get<BinaryFileData>(key, filesStore);
 
-    XLogger.debug("Removing file", key);
+      // Skip deletion if file was created after script execution to avoid deleting newer files
+      if (file.created > params.executionTimestamp) {
+        return;
+      }
 
-    await del(key, filesStore);
-  });
+      await del(key, filesStore);
+
+      XLogger.debug("Deleted file", key);
+    })
+  );
 })();

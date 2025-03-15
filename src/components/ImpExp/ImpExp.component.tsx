@@ -22,6 +22,7 @@ import { RandomUtils } from "../../lib/utils/random.utils";
 import { TabUtils } from "../../lib/utils/tab.utils";
 import { parseDataJSON } from "./helpers/import.helpers";
 import { IDrawingExport } from "../../interfaces/drawing-export.interface";
+import { runActionScript } from "../../execute-scripts/action-scripts";
 
 const CalloutText = Callout.Text as any;
 
@@ -44,10 +45,7 @@ export function ImpExp() {
     // Seems we need to wait a bit to avoid not executing the script
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    await browser.scripting.executeScript({
-      target: { tabId: excalidrawTab.id },
-      files: ["./js/execute-scripts/export-store.bundle.js"],
-    });
+    await runActionScript("send-stored-files", excalidrawTab.id);
   };
 
   const onImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
