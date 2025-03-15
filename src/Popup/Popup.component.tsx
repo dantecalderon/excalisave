@@ -209,7 +209,7 @@ const Popup: React.FC = () => {
         return;
       }
 
-      await DrawingStore.loadDrawing(loadDrawingId);
+      await DrawingStore.switchDrawing(loadDrawingId);
 
       setCurrentDrawingId(loadDrawingId);
       setIsLiveCollaboration(false);
@@ -229,8 +229,10 @@ const Popup: React.FC = () => {
   };
 
   const handleNewDrawing = async () => {
-    await DrawingStore.newDrawing();
+    await DrawingStore.newEmptyDrawing();
     setCurrentDrawingId(undefined);
+
+    // Close the popup after creating a new empty drawing
     window.close();
   };
 

@@ -57,7 +57,7 @@ export class DrawingStore {
     });
   }
 
-  static async loadDrawing(drawingId: string) {
+  static async switchDrawing(targetDrawingId: string) {
     const activeTab = await TabUtils.getActiveTab();
 
     if (!activeTab) {
@@ -67,11 +67,11 @@ export class DrawingStore {
     }
 
     await runActionScript("switch-drawing", activeTab.id, {
-      targetDrawingId: drawingId,
+      targetDrawingId,
     });
   }
 
-  static async newDrawing() {
+  static async newEmptyDrawing() {
     const activeTab = await TabUtils.getActiveTab();
 
     if (!activeTab) {
@@ -80,10 +80,7 @@ export class DrawingStore {
       return;
     }
 
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      files: ["./js/execute-scripts/newDrawing.bundle.js"],
-    });
+    await runActionScript("new-empty-drawing", activeTab.id);
   }
 
   /**
@@ -99,7 +96,7 @@ export class DrawingStore {
       return;
     }
 
-    await runActionScript("sendDrawingDataToSave", activeTab.id, {
+    await runActionScript("update-current-drawing", activeTab.id, {
       saveToCloud: true,
     });
   }

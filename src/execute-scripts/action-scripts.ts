@@ -17,6 +17,10 @@ export type ActionScriptParams = {
   "switch-drawing": {
     targetDrawingId: string;
   };
+  "new-empty-drawing": undefined;
+  "update-current-drawing": {
+    saveToCloud?: boolean;
+  };
 };
 
 /**

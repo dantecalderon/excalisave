@@ -52,15 +52,20 @@ module.exports = {
       "execute-scripts",
       "send-drawing-data-to-save.ts"
     ),
+    "execute-scripts/update-current-drawing": path.join(
+      sourcePath,
+      "execute-scripts",
+      "update-current-drawing.ts"
+    ),
     "execute-scripts/switch-drawing": path.join(
       sourcePath,
       "execute-scripts",
       "switch-drawing.ts"
     ),
-    "execute-scripts/newDrawing": path.join(
+    "execute-scripts/new-empty-drawing": path.join(
       sourcePath,
       "execute-scripts",
-      "newDrawing.ts"
+      "new-empty-drawing.ts"
     ),
     "execute-scripts/send-stored-files": path.join(
       sourcePath,

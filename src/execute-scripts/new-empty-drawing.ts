@@ -1,14 +1,25 @@
+/**
+ * Creates a new empty drawing, without any content.
+ * It doesn't save the drawing locally. To save it, the user needs to click on "Save as..." button.
+ *
+ * This behavior is similar to "File > New File" in a text editor.
+ */
 import { getDrawingDataState } from "../ContentScript/content-script.utils";
 import { MessageType, SaveDrawingMessage } from "../constants/message.types";
 import { DRAWING_ID_KEY_LS } from "../lib/constants";
 import { XLogger } from "../lib/logger";
 import { As } from "../lib/types.utils";
-const { browser } = require("webextension-polyfill-ts");
+import { browser } from "webextension-polyfill-ts";
 
 (async () => {
   // Save data before load new drawing if there is a current drawing
   const currentDrawingId = localStorage.getItem(DRAWING_ID_KEY_LS);
+
   if (currentDrawingId) {
+    XLogger.info(
+      "Sending to save current drawing before creating a new empty one"
+    );
+
     const drawingDataState = await getDrawingDataState();
 
     await browser.runtime.sendMessage(

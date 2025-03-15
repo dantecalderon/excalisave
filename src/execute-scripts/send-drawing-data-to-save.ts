@@ -15,7 +15,6 @@ const { browser } = require("webextension-polyfill-ts");
   const params = getScriptParams<
     ActionScriptParams["sendDrawingDataToSave"] | undefined
   >();
-  console.log("HELLO DANTE JAJAJAJ", params);
 
   const saveAsNew = !!params?.id;
 
