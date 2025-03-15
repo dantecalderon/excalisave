@@ -19,12 +19,14 @@ const filesStore = createStore("files-db", "files-store");
 
   const files = keyBy(response, "id");
 
-  browser.runtime.sendMessage({
+  const exportStoreMessage: ExportStoreMessage = {
     type: MessageType.EXPORT_STORE,
     payload: {
       files,
     },
-  } as ExportStoreMessage);
+  };
+
+  browser.runtime.sendMessage(exportStoreMessage);
 
   // Close tab after send message
   window.close();

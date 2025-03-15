@@ -47,10 +47,10 @@ module.exports = {
   entry: {
     manifest: path.join(sourcePath, "manifest.json"),
     background: path.join(sourcePath, "background", "index.ts"),
-    "execute-scripts/sendDrawingDataToSave": path.join(
+    "execute-scripts/save-new-drawing": path.join(
       sourcePath,
       "execute-scripts",
-      "send-drawing-data-to-save.ts"
+      "save-new-drawing.ts"
     ),
     "execute-scripts/update-current-drawing": path.join(
       sourcePath,

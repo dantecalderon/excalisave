@@ -146,12 +146,14 @@ browser.runtime.onMessage.addListener(
                 await browser.storage.local.get(message.payload.id)
               )[message.payload.id] as IDrawing;
 
+              const drawingToUpdate: IDrawing = {
+                ...currentDrawing,
+                lastSync: saveResponse.modifiedTime,
+                lastModified: saveResponse.modifiedTime,
+              };
+
               await browser.storage.local.set({
-                [message.payload.id]: {
-                  ...currentDrawing,
-                  lastSync: saveResponse.modifiedTime,
-                  lastModified: saveResponse.modifiedTime,
-                } as IDrawing,
+                [message.payload.id]: drawingToUpdate,
               });
             }
           }
@@ -254,19 +256,12 @@ browser.runtime.onMessage.addListener(
 
           const id = `drawing:${RandomUtils.generateRandomId()}`;
 
-          // This workaround is to pass params to script, it's ugly but it works
-          await browser.scripting.executeScript({
-            target: { tabId: activeTab.id },
-            func: (id, name, setCurrent) => {
-              window.__SCRIPT_PARAMS__ = { id, name, setCurrent };
-            },
-            args: [id, name, setCurrent],
+          await runActionScript("save-new-drawing", activeTab.id, {
+            id,
+            name,
+            setCurrent,
           });
 
-          await browser.scripting.executeScript({
-            target: { tabId: activeTab.id },
-            files: ["./js/execute-scripts/sendDrawingDataToSave.bundle.js"],
-          });
           break;
         default:
           break;

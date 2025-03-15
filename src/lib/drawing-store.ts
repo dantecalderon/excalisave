@@ -19,9 +19,9 @@ export class DrawingStore {
   static async findDrawingById(
     drawingId: string
   ): Promise<IDrawing | undefined> {
-    const drawing = (await browser.storage.local.get(drawingId))[
+    const drawing: IDrawing = (await browser.storage.local.get(drawingId))[
       drawingId
-    ] as IDrawing;
+    ];
 
     if (!drawing) {
       return undefined;
@@ -42,18 +42,9 @@ export class DrawingStore {
 
     const id = `drawing:${RandomUtils.generateRandomId()}`;
 
-    // This workaround is to pass params to script, it's ugly but it works
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      func: (id, name) => {
-        window.__SCRIPT_PARAMS__ = { id, name };
-      },
-      args: [id, name],
-    });
-
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      files: ["./js/execute-scripts/sendDrawingDataToSave.bundle.js"],
+    await runActionScript("save-new-drawing", activeTab.id, {
+      id,
+      name,
     });
   }
 
@@ -132,13 +123,15 @@ export class DrawingStore {
 
     await DrawingStore.deleteDrawingFromFavorites(id);
 
-    await browser.runtime.sendMessage({
+    const deleteDrawingMessage: DeleteDrawingMessage = {
       type: MessageType.DELETE_DRAWING,
       payload: {
         id,
         saveToCloud: true,
       },
-    } as DeleteDrawingMessage);
+    };
+
+    await browser.runtime.sendMessage(deleteDrawingMessage);
   }
 
   static async hasUnsavedChanges(): Promise<boolean> {
@@ -175,13 +168,15 @@ export class DrawingStore {
   }
 
   static async renameDrawing(id: string, name: string) {
-    await browser.runtime.sendMessage({
+    const renameDrawingMessage: RenameDrawingMessage = {
       type: MessageType.RENAME_DRAWING,
       payload: {
         id,
         name,
         saveToCloud: true,
       },
-    } as RenameDrawingMessage);
+    };
+
+    await browser.runtime.sendMessage(renameDrawingMessage);
   }
 }
