@@ -25,7 +25,7 @@ export type ActionScriptParams = {
 /**
  * Executes an action script, it supports passing parameters to the script.
  *
- * @param filename - The filename of the script in src/execute-scripts/ (without the extension)
+ * @param filename - The filename of the script in src/action-scripts/ (without the extension)
  * @param activeTabId - The id of the active tab
  * @param params - The params to pass to the script
  * @see getScriptParams() in content-script.utils.ts for reading the params
@@ -50,6 +50,6 @@ export const runActionScript = async <T extends keyof ActionScriptParams>(
 
   await browser.scripting.executeScript({
     target: { tabId: activeTabId },
-    files: [`./js/execute-scripts/${filename}.bundle.js`],
+    files: [`./js/action-scripts/${filename}.bundle.js`],
   });
 };

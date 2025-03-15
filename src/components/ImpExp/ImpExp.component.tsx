@@ -22,7 +22,7 @@ import { RandomUtils } from "../../lib/utils/random.utils";
 import { TabUtils } from "../../lib/utils/tab.utils";
 import { parseDataJSON } from "./helpers/import.helpers";
 import { IDrawingExport } from "../../interfaces/drawing-export.interface";
-import { runActionScript } from "../../execute-scripts/action-scripts";
+import { runActionScript } from "../../action-scripts/action-scripts";
 
 const CalloutText = Callout.Text as any;
 
@@ -136,7 +136,7 @@ export function ImpExp() {
 
           await browser.scripting.executeScript({
             target: { tabId: excalidrawTab.id },
-            files: ["./js/execute-scripts/add-files-to-store.bundle.js"],
+            files: ["./js/action-scripts/add-files-to-store.bundle.js"],
           });
 
           let favorites: string[] = dataJSON?.favorites || [];

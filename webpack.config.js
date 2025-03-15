@@ -47,39 +47,39 @@ module.exports = {
   entry: {
     manifest: path.join(sourcePath, "manifest.json"),
     background: path.join(sourcePath, "background", "index.ts"),
-    "execute-scripts/save-new-drawing": path.join(
+    "action-scripts/save-new-drawing": path.join(
       sourcePath,
-      "execute-scripts",
+      "action-scripts",
       "save-new-drawing.ts"
     ),
-    "execute-scripts/update-current-drawing": path.join(
+    "action-scripts/update-current-drawing": path.join(
       sourcePath,
-      "execute-scripts",
+      "action-scripts",
       "update-current-drawing.ts"
     ),
-    "execute-scripts/switch-drawing": path.join(
+    "action-scripts/switch-drawing": path.join(
       sourcePath,
-      "execute-scripts",
+      "action-scripts",
       "switch-drawing.ts"
     ),
-    "execute-scripts/new-empty-drawing": path.join(
+    "action-scripts/new-empty-drawing": path.join(
       sourcePath,
-      "execute-scripts",
+      "action-scripts",
       "new-empty-drawing.ts"
     ),
-    "execute-scripts/send-stored-files": path.join(
+    "action-scripts/send-stored-files": path.join(
       sourcePath,
-      "execute-scripts",
+      "action-scripts",
       "send-stored-files.ts"
     ),
-    "execute-scripts/delete-unused-files-from-store": path.join(
+    "action-scripts/delete-unused-files-from-store": path.join(
       sourcePath,
-      "execute-scripts",
+      "action-scripts",
       "delete-unused-files-from-store.ts"
     ),
-    "execute-scripts/add-files-to-store": path.join(
+    "action-scripts/add-files-to-store": path.join(
       sourcePath,
-      "execute-scripts",
+      "action-scripts",
       "add-files-to-store.ts"
     ),
     "content-scripts/listenDrawingUpdates": path.join(

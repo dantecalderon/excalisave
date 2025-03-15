@@ -15,7 +15,7 @@ import { RandomUtils } from "../lib/utils/random.utils";
 import { GoogleDriveApi } from "../lib/google-drive-api";
 import { IDrawingExport } from "../interfaces/drawing-export.interface";
 import { hashJSON } from "../lib/utils/json.utils";
-import { runActionScript } from "../execute-scripts/action-scripts";
+import { runActionScript } from "../action-scripts/action-scripts";
 
 browser.runtime.onInstalled.addListener(async () => {
   XLogger.log("onInstalled...");

@@ -130,25 +130,28 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
       <DropdownMenu.Root>
         <Flex>
           <Flex className="Navbar__ActionButton">
-            <Button
-              disabled={
-                !props.inExcalidrawPage ||
-                props.isLoading ||
-                props.isLiveCollaboration ||
-                !unsavedChanges
-              }
-              onClick={() => {
-                if (props.currentDrawing) {
-                  props.onSaveDrawing();
-                } else {
-                  setIsCreateDialogOpen(true);
+            {(props.userInfo || !props.currentDrawing) && ( // Only show button to save to cloud or new drawing.
+              <Button
+                className="Navbar__ActionButton__SaveButton"
+                disabled={
+                  !props.inExcalidrawPage ||
+                  props.isLoading ||
+                  props.isLiveCollaboration ||
+                  (props.userInfo && props.currentDrawing && !unsavedChanges)
                 }
-              }}
-              color={unsavedChanges ? "green" : undefined}
-            >
-              {props.userInfo && <GoogleDriveIcon />}
-              {props.currentDrawing ? "Save" : "Save As..."}
-            </Button>
+                onClick={() => {
+                  if (props.currentDrawing) {
+                    props.onSaveDrawing();
+                  } else {
+                    setIsCreateDialogOpen(true);
+                  }
+                }}
+                color={props.userInfo ? "green" : undefined}
+              >
+                {props.userInfo && <GoogleDriveIcon />}
+                {props.currentDrawing ? "Save" : "Save As..."}
+              </Button>
+            )}
             {unsavedChanges && (
               <Text
                 color="gray"

@@ -1,5 +1,5 @@
 import { browser } from "webextension-polyfill-ts";
-import { runActionScript } from "../execute-scripts/action-scripts";
+import { runActionScript } from "../action-scripts/action-scripts";
 import { IDrawing } from "../interfaces/drawing.interface";
 import { DRAWING_ID_KEY_LS } from "./constants";
 import { XLogger } from "./logger";

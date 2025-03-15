@@ -1,8 +1,8 @@
 .Navbar__ActionButton {
   position: relative;
-  & > button:first-child {
+  &__SaveButton {
     min-width: 80px;
-    margin-right: 2px;
+    margin-right: 3px !important;
   }
 
   & button:disabled {
