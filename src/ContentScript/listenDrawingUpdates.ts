@@ -38,11 +38,6 @@ timeoutId = window.setTimeout(() => {
     const currentId = localStorage.getItem(DRAWING_ID_KEY_LS);
     if (currentId && prevVersionFiles !== currentVersionFiles) {
       prevVersionFiles = currentVersionFiles;
-      const currentDrawing = await DrawingStore.findDrawingById(currentId);
-      if (!currentDrawing) {
-        XLogger.error("No current drawing found");
-        return;
-      }
 
       try {
         const drawingDataState = await getDrawingDataState();
