@@ -19,6 +19,7 @@ export function useFolders() {
     const newFolders = [...currentFolders, newFolder];
 
     await browser.storage.local.set({ folders: newFolders });
+
     setFolders(newFolders);
   };
 
@@ -35,12 +36,15 @@ export function useFolders() {
     });
 
     await browser.storage.local.set({ folders: newFolders });
+
     setFolders(newFolders);
   };
 
   const removeFolder = async (folderId: string) => {
     const newFolders = folders.filter((folder) => folder.id !== folderId);
+
     await browser.storage.local.set({ folders: newFolders });
+
     setFolders(newFolders);
   };
 
@@ -61,6 +65,7 @@ export function useFolders() {
     });
 
     await browser.storage.local.set({ folders: newFolders });
+
     setFolders(newFolders);
   };
 
@@ -80,6 +85,7 @@ export function useFolders() {
     });
 
     await browser.storage.local.set({ folders: newFolders });
+
     setFolders(newFolders);
   };
 

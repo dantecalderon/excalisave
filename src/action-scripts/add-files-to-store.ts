@@ -1,3 +1,10 @@
+/**
+ * Adds files to the store so it can be used by drawings.
+ *
+ * store: IndexedDB store used by Excalidraw to load and persist file data.
+ *
+ * @param files - The files to add to the IndexedDB.
+ */
 import { BinaryFileData } from "@excalidraw/excalidraw/types/types";
 import { createStore, keys, set, update } from "idb-keyval";
 import { getScriptParams } from "../ContentScript/content-script.utils";

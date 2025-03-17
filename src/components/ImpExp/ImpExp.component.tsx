@@ -21,6 +21,8 @@ import { keyBy } from "../../lib/utils/array.utils";
 import { RandomUtils } from "../../lib/utils/random.utils";
 import { TabUtils } from "../../lib/utils/tab.utils";
 import { parseDataJSON } from "./helpers/import.helpers";
+import { IDrawingExport } from "../../interfaces/drawing-export.interface";
+import { runActionScript } from "../../action-scripts/action-scripts";
 
 const CalloutText = Callout.Text as any;
 
@@ -43,10 +45,7 @@ export function ImpExp() {
     // Seems we need to wait a bit to avoid not executing the script
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    await browser.scripting.executeScript({
-      target: { tabId: excalidrawTab.id },
-      files: ["./js/execute-scripts/export-store.bundle.js"],
-    });
+    await runActionScript("send-stored-files", excalidrawTab.id);
   };
 
   const onImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -137,7 +136,7 @@ export function ImpExp() {
 
           await browser.scripting.executeScript({
             target: { tabId: excalidrawTab.id },
-            files: ["./js/execute-scripts/load-store.bundle.js"],
+            files: ["./js/action-scripts/add-files-to-store.bundle.js"],
           });
 
           let favorites: string[] = dataJSON?.favorites || [];
@@ -275,42 +274,41 @@ export function ImpExp() {
     browser.runtime.onMessage.addListener(
       async (message: ExportStoreMessage) => {
         if (message.type === MessageType.EXPORT_STORE) {
-          const result = await browser.storage.local.get();
+          const storage = await browser.storage.local.get();
 
           const drawings: IDrawing[] = [];
-          Object.entries(result).forEach(([key, value]) => {
+          Object.entries(storage).forEach(([key, value]) => {
             if (key.startsWith("drawing")) {
               drawings.push(value);
             }
           });
 
-          const zipFile = new JSZip();
-
           // Include favorites and folders
-          const favorites: string[] = result["favorites"] || [];
-          const folders: Folder[] = result["folders"] || [];
+          const favorites: string[] = storage["favorites"] || [];
+          const folders: Folder[] = storage["folders"] || [];
 
+          const zipFile = new JSZip();
           zipFile.file("data.json", JSON.stringify({ favorites, folders }));
 
-          // drawings
+          // Add all the `files` used by the drawing to the `files` property to export them.
+          // Usually these files are images and are exported as base 64.
           drawings.forEach((drawing) => {
             const elements = JSON.parse(drawing.data.excalidraw);
 
-            // Filter files used in the drawing elements
             const files: BinaryFiles = {};
             for (const element of elements) {
-              if (
-                !element.isDeleted &&
-                "fileId" in element &&
-                element.fileId &&
-                message.payload.files[element.fileId]
-              ) {
+              const elementUsesAFile =
+                !element.isDeleted && "fileId" in element && element.fileId;
+              const fileExistsOnStorage =
+                !!message.payload.files[element.fileId];
+
+              if (elementUsesAFile && fileExistsOnStorage) {
                 files[element.fileId] = message.payload.files[element.fileId];
               }
             }
 
             // This structure follows the .excalidraw file structure, so it can be imported independently without needing to install the extension.
-            const drawingToExport: any = {
+            const drawingToExport: IDrawingExport = {
               elements,
               version: 2, // TODO: Should we get the version from source code? https://github.com/excalidraw/excalidraw/blob/master/packages/excalidraw/constants.ts#L261
               type: "excalidraw",
@@ -329,6 +327,7 @@ export function ImpExp() {
               files,
             };
 
+            // Save all drawing files within the drawings folder:
             zipFile
               .folder("drawings")
               .file(

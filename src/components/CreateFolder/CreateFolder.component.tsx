@@ -45,7 +45,7 @@ export function CreateFolder(props: CreateFolderProps) {
           </DialogDescription>
 
           <Flex direction="column" mt="3">
-            <TextField.Input
+            <TextField.Root
               onChange={(event) => {
                 setName(event.target.value);
               }}

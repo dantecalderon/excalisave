@@ -1,14 +1,35 @@
 import { browser } from "webextension-polyfill-ts";
-import { RandomUtils } from "./utils/random.utils";
-import { TabUtils } from "./utils/tab.utils";
+import { runActionScript } from "../action-scripts/action-scripts";
+import { IDrawing } from "../interfaces/drawing.interface";
 import { DRAWING_ID_KEY_LS } from "./constants";
 import { XLogger } from "./logger";
+import { RandomUtils } from "./utils/random.utils";
+import { TabUtils } from "./utils/tab.utils";
+import {
+  DeleteDrawingMessage,
+  MessageType,
+  RenameDrawingMessage,
+} from "../constants/message.types";
 
 type SaveDrawingProps = {
   name: string;
 };
 
 export class DrawingStore {
+  static async findDrawingById(
+    drawingId: string
+  ): Promise<IDrawing | undefined> {
+    const drawing: IDrawing = (await browser.storage.local.get(drawingId))[
+      drawingId
+    ];
+
+    if (!drawing) {
+      return undefined;
+    }
+
+    return drawing;
+  }
+
   static async saveNewDrawing({ name }: SaveDrawingProps) {
     XLogger.log("Saving new drawing", { name });
     const activeTab = await TabUtils.getActiveTab();
@@ -21,22 +42,13 @@ export class DrawingStore {
 
     const id = `drawing:${RandomUtils.generateRandomId()}`;
 
-    // This workaround is to pass params to script, it's ugly but it works
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      func: (id, name) => {
-        window.__SCRIPT_PARAMS__ = { id, name };
-      },
-      args: [id, name],
-    });
-
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      files: ["./js/execute-scripts/sendDrawingDataToSave.bundle.js"],
+    await runActionScript("save-new-drawing", activeTab.id, {
+      id,
+      name,
     });
   }
 
-  static async loadDrawing(drawingId: string) {
+  static async switchDrawing(targetDrawingId: string) {
     const activeTab = await TabUtils.getActiveTab();
 
     if (!activeTab) {
@@ -45,22 +57,12 @@ export class DrawingStore {
       return;
     }
 
-    // This workaround is to pass params to script, it's ugly but it works
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      func: (drawingId) => {
-        window.__SCRIPT_PARAMS__ = { id: drawingId };
-      },
-      args: [drawingId],
-    });
-
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      files: ["./js/execute-scripts/loadDrawing.bundle.js"],
+    await runActionScript("switch-drawing", activeTab.id, {
+      targetDrawingId,
     });
   }
 
-  static async newDrawing() {
+  static async newEmptyDrawing() {
     const activeTab = await TabUtils.getActiveTab();
 
     if (!activeTab) {
@@ -69,10 +71,7 @@ export class DrawingStore {
       return;
     }
 
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      files: ["./js/execute-scripts/newDrawing.bundle.js"],
-    });
+    await runActionScript("new-empty-drawing", activeTab.id);
   }
 
   /**
@@ -88,9 +87,8 @@ export class DrawingStore {
       return;
     }
 
-    await browser.scripting.executeScript({
-      target: { tabId: activeTab.id },
-      files: ["./js/execute-scripts/sendDrawingDataToSave.bundle.js"],
+    await runActionScript("update-current-drawing", activeTab.id, {
+      saveToCloud: true,
     });
   }
 
@@ -124,6 +122,16 @@ export class DrawingStore {
     });
 
     await DrawingStore.deleteDrawingFromFavorites(id);
+
+    const deleteDrawingMessage: DeleteDrawingMessage = {
+      type: MessageType.DELETE_DRAWING,
+      payload: {
+        id,
+        saveToCloud: true,
+      },
+    };
+
+    await browser.runtime.sendMessage(deleteDrawingMessage);
   }
 
   static async hasUnsavedChanges(): Promise<boolean> {
@@ -153,9 +161,22 @@ export class DrawingStore {
       }
 
       return hasUnsaved;
-    } catch { }
+    } catch {}
 
     // By default, show confirmation dialog, we ensure the action is approved.
     return true;
+  }
+
+  static async renameDrawing(id: string, name: string) {
+    const renameDrawingMessage: RenameDrawingMessage = {
+      type: MessageType.RENAME_DRAWING,
+      payload: {
+        id,
+        name,
+        saveToCloud: true,
+      },
+    };
+
+    await browser.runtime.sendMessage(renameDrawingMessage);
   }
 }
