@@ -1,8 +1,12 @@
-import { browser } from "webextension-polyfill-ts";
-import { XLogger } from "./logger";
-import { IDrawingExport } from "../interfaces/drawing-export.interface";
 import axios from "redaxios";
-import { GoogleModifyFileResponse } from "../interfaces/google.interface";
+import { browser } from "webextension-polyfill-ts";
+import { IDrawingExport } from "../interfaces/drawing-export.interface";
+import {
+  GoogleCreateFolderResponse,
+  GoogleDriveFilesMetadataResponse,
+  GoogleModifyFileResponse,
+} from "../interfaces/google.interface";
+import { XLogger } from "./logger";
 import { isValidDateString } from "./utils/date.utils";
 
 const BASE_URL = "https://www.googleapis.com";
@@ -44,15 +48,161 @@ export class GoogleDriveApi {
 
   static async login() {
     try {
-      const { token } = await (browser.identity as any).getAuthToken({
+      const { token, grantedScopes } = await (
+        browser.identity as any
+      ).getAuthToken({
         interactive: true,
       });
 
-      return token;
+      return {
+        success: true,
+        details: {
+          token,
+          grantedScopes,
+        },
+      };
     } catch (error) {
-      XLogger.error("Error logging in", error);
-      throw new Error("Failed to login");
+      XLogger.error("Login failed due to an error:", error);
+
+      return {
+        success: false,
+        details: {
+          error: (error as Error).message,
+          stack: (error as Error).stack,
+        },
+      };
     }
+  }
+
+  static async getOrCreateFolderId(
+    folderName: string = "excalisave"
+  ): Promise<string> {
+    XLogger.debug("GoogleDriveApi: Fetching folderId from cache");
+
+    const cachedFolderId = (await browser.storage.local.get("cloudFolderId"))[
+      "cloudFolderId"
+    ];
+
+    if (cachedFolderId) {
+      XLogger.debug("GoogleDriveApi: Using cached folderId", cachedFolderId);
+
+      return cachedFolderId;
+    }
+
+    const token = await GoogleDriveApi.getToken();
+
+    XLogger.debug(
+      `GoogleDriveApi: folderId not found in cache, fetching folder by name ${folderName}`
+    );
+
+    const response = await fetch(
+      `${BASE_URL}/drive/v3/files?q=mimeType='application/vnd.google-apps.folder' and name='${folderName}'`,
+      {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      }
+    );
+
+    const responseJson: GoogleDriveFilesMetadataResponse =
+      await response.json();
+
+    if (responseJson?.files?.[0]?.id) {
+      await browser.storage.local.set({
+        cloudFolderId: responseJson.files[0].id,
+      });
+
+      XLogger.debug(`GoogleDriveApi: Found folderId by name ${folderName}`);
+
+      return responseJson.files[0].id;
+    }
+
+    // If not found by name, create it
+
+    XLogger.debug(
+      `GoogleDriveApi: Folder not found by name ${folderName}, creating it`
+    );
+
+    const responseCreate = await fetch("/drive/v3/files", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: folderName,
+        mimeType: "application/vnd.google-apps.folder",
+        parents: ["root"],
+      }),
+    });
+
+    const responseCreateJson: GoogleCreateFolderResponse =
+      await responseCreate.json();
+
+    if (!responseCreateJson?.id) {
+      throw new Error("Failed to create folder");
+    }
+
+    XLogger.debug(
+      `GoogleDriveApi: Created folder ${folderName} with id ${responseCreateJson.id}`
+    );
+
+    await browser.storage.local.set({
+      cloudFolderId: responseCreateJson.id,
+    });
+
+    return responseCreateJson.id;
+  }
+
+  static async getAllFiles() {
+    const folderId = await GoogleDriveApi.getOrCreateFolderId();
+
+    const token = await GoogleDriveApi.getToken();
+
+    XLogger.debug("Fetching All Files: /drive/v3/files");
+
+    const response = await fetch(
+      `${BASE_URL}/drive/v3/files?q='${folderId}' in parents and trashed=false&fields=files(id,name,modifiedTime,properties)&pageSize=1000`,
+      {
+        headers: {
+          Authorization: "Bearer " + token,
+          Accept: "application/json",
+        },
+      }
+    );
+
+    const responseJson: GoogleDriveFilesMetadataResponse =
+      await response.json();
+
+    XLogger.debug("Response", responseJson);
+
+    let files = responseJson.files.filter((file) => {
+      return file.properties?.excalisaveId !== undefined;
+    });
+
+    let isNextPageAvailable = responseJson.nextPageToken ? true : false;
+    let nextPageToken = responseJson.nextPageToken;
+
+    while (isNextPageAvailable) {
+      const response = await fetch(
+        `${BASE_URL}/drive/v3/files?q='${folderId}' in parents&fields=files(id,name,modifiedTime,properties)&pageSize=1000&pageToken=${nextPageToken}`,
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const responseJson: GoogleDriveFilesMetadataResponse =
+        await response.json();
+
+      files.push(...responseJson.files);
+      isNextPageAvailable = responseJson.nextPageToken ? true : false;
+      nextPageToken = responseJson.nextPageToken;
+    }
+
+    return files;
   }
 
   private static async request(
@@ -109,9 +259,10 @@ export class GoogleDriveApi {
     return response.data.files;
   }
 
-  static async saveFileToDrive(file: IDrawingExport) {
+  static async saveFileToDrive(file: IDrawingExport, hash: string) {
     try {
-      const folderId = "195z-HF3Ddtw9UDsA3mXM-FkD5n4xN1F0";
+      const folderId = await GoogleDriveApi.getOrCreateFolderId();
+
       const token = await GoogleDriveApi.getToken();
 
       const localId = file.excalisave.id;
@@ -149,6 +300,7 @@ export class GoogleDriveApi {
             properties: {
               // Save the local id of the drawing to be able to modify the file later
               excalisaveId: localId,
+              hash,
             },
           },
           {
@@ -167,9 +319,9 @@ export class GoogleDriveApi {
       }
 
       const modifyFileResponse = await GoogleDriveApi.modifyFile(
-        token,
         cloudFileId,
-        file
+        file,
+        hash
       );
 
       XLogger.info("Modified file in drive", modifyFileResponse);
@@ -181,6 +333,25 @@ export class GoogleDriveApi {
       // throw new Error("Failed to save file to drive");
       return undefined;
     }
+  }
+
+  static async getFile(fileId: string): Promise<IDrawingExport> {
+    const token = await GoogleDriveApi.getToken();
+
+    const response = await fetch(
+      `${BASE_URL}/drive/v3/files/${fileId}?alt=media`,
+      {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      }
+    );
+
+    const responseJson = await response.json();
+
+    XLogger.debug("File", responseJson);
+
+    return responseJson;
   }
 
   /**
@@ -211,23 +382,40 @@ export class GoogleDriveApi {
   }
 
   static async modifyFile(
-    token: string,
     fileId: string,
-    file: IDrawingExport
+    file: IDrawingExport,
+    hash: string
   ): Promise<GoogleModifyFileResponse> {
-    // Then upload the actual file content using the /upload endpoint
-    const fileContent = JSON.stringify(file);
+    const token = await GoogleDriveApi.getToken();
+
+    const metadata = new Blob(
+      [
+        JSON.stringify({
+          properties: {
+            excalisaveId: file.excalisave.id,
+            hash,
+          },
+        }),
+      ],
+      {
+        type: "application/json",
+      }
+    );
+
+    const form = new FormData();
+    form.append("metadata", metadata);
+    form.append("file", JSON.stringify(file));
+
     const uploadResponse = await fetch(
       "https://www.googleapis.com/upload/drive/v3/files/" +
         fileId +
-        "?uploadType=media&fields=modifiedTime",
+        "?uploadType=multipart&fields=modifiedTime",
       {
         method: "PATCH",
         headers: {
           Authorization: "Bearer " + token,
-          "Content-Type": "application/json",
         },
-        body: fileContent,
+        body: form,
       }
     );
 
@@ -236,6 +424,8 @@ export class GoogleDriveApi {
         "Failed to upload file content: " + (await uploadResponse.text())
       );
     }
+
+    XLogger.debug("Upload response", uploadResponse);
 
     const response = await uploadResponse.json();
 

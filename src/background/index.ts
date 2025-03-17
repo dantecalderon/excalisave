@@ -3,6 +3,7 @@ import {
   AutoSaveMessage,
   CleanupFilesMessage,
   DeleteDrawingMessage,
+  LoginResultMessage,
   MessageType,
   RenameDrawingMessage,
   SaveDrawingMessage,
@@ -38,7 +39,8 @@ browser.runtime.onMessage.addListener(
       | CleanupFilesMessage
       | RenameDrawingMessage
       | DeleteDrawingMessage
-      | AutoSaveMessage,
+      | AutoSaveMessage
+      | LoginResultMessage,
     _sender: any
   ) => {
     try {
@@ -87,8 +89,6 @@ browser.runtime.onMessage.addListener(
             excalisave: {
               id: message.payload.id,
               createdAt: currentDrawing?.createdAt,
-              imageBase64:
-                message.payload?.imageBase64 || currentDrawing?.imageBase64,
               name: currentDrawing?.name,
             },
             files: {}, // Files are not needed to compare changes. Since it has
@@ -96,7 +96,11 @@ browser.runtime.onMessage.addListener(
 
           const newDrawingHash = await hashJSON(newDrawingHashData);
 
-          if (newDrawingHash !== currentDrawing.hash) {
+          if (
+            newDrawingHash !== currentDrawing.hash ||
+            message.payload.excalidrawState !==
+              currentDrawing.data.excalidrawState
+          ) {
             const newDrawing: IDrawing = {
               ...currentDrawing,
               name: message.payload.name || currentDrawing.name,
@@ -106,7 +110,10 @@ browser.runtime.onMessage.addListener(
                 message.payload.viewBackgroundColor ||
                 currentDrawing.viewBackgroundColor,
               hash: newDrawingHash,
-              lastModified: new Date().toISOString(),
+              lastModified:
+                newDrawingHash !== currentDrawing.hash
+                  ? new Date().toISOString()
+                  : currentDrawing.lastModified,
               data: {
                 excalidraw: message.payload.excalidraw,
                 excalidrawState: message.payload.excalidrawState,
@@ -122,22 +129,25 @@ browser.runtime.onMessage.addListener(
 
           if (message.payload.saveToCloud) {
             XLogger.log("Saving to cloud", message.payload.id);
-            const saveResponse = await GoogleDriveApi.saveFileToDrive({
-              elements: newDrawingHashData.elements,
-              version: 2,
-              type: "excalidraw",
-              source: "https://excalidraw.com",
-              appState: newDrawingHashData.appState,
-              excalisave: {
-                createdAt: currentDrawing.createdAt,
-                id: currentDrawing.id,
-                name: currentDrawing.name,
-                imageBase64:
-                  message.payload.imageBase64 || currentDrawing.imageBase64,
+            const saveResponse = await GoogleDriveApi.saveFileToDrive(
+              {
+                elements: newDrawingHashData.elements,
+                version: 2,
+                type: "excalidraw",
+                source: "https://excalidraw.com",
+                appState: newDrawingHashData.appState,
+                excalisave: {
+                  createdAt: currentDrawing.createdAt,
+                  id: currentDrawing.id,
+                  name: currentDrawing.name,
+                  imageBase64:
+                    message.payload.imageBase64 || currentDrawing.imageBase64,
+                },
+                // TODO: Include files:
+                files: {},
               },
-              // TODO: Include files:
-              files: {},
-            });
+              newDrawingHash
+            );
 
             XLogger.log("Saved to cloud", message.payload.id);
 
@@ -263,6 +273,71 @@ browser.runtime.onMessage.addListener(
           });
 
           break;
+
+        case MessageType.LOGIN_RESULT:
+          XLogger.log("Login result", message.payload);
+
+          if (message.payload.success) {
+            const filesFromCloud = await GoogleDriveApi.getAllFiles();
+
+            XLogger.debug("Files from cloud", filesFromCloud);
+
+            for (const file of filesFromCloud) {
+              try {
+                XLogger.debug("Checking file", file);
+                const drawing: IDrawing = (
+                  await browser.storage.local.get(file.properties.excalisaveId)
+                )[file.properties.excalisaveId];
+
+                if (!drawing) {
+                  // No drawing then download the save locally
+                  XLogger.debug(
+                    "No drawing found, downloading file...",
+                    file.id
+                  );
+                  const fileContent = await GoogleDriveApi.getFile(file.id);
+
+                  const newDrawing: IDrawing = {
+                    id: file.properties.excalisaveId,
+                    name: file.name.split(".excalidraw")[0],
+                    createdAt: fileContent.excalisave.createdAt,
+                    imageBase64: fileContent.excalisave.imageBase64,
+                    viewBackgroundColor:
+                      fileContent.appState.viewBackgroundColor || "#ffffff",
+                    hash: file.properties.hash,
+                    lastSync: file.modifiedTime,
+                    lastModified: file.modifiedTime,
+                    data: {
+                      excalidraw: JSON.stringify(fileContent.elements),
+                      excalidrawState: JSON.stringify(fileContent.appState),
+                      versionFiles: Date.now().toString(),
+                      versionDataState: Date.now().toString(),
+                    },
+                  };
+
+                  await browser.storage.local.set({
+                    [file.properties.excalisaveId]: newDrawing,
+                  });
+                } else {
+                  if (drawing.hash && file.properties.hash === drawing.hash) {
+                    // No changes, just update the last modified date
+                    await browser.storage.local.set({
+                      [file.properties.excalisaveId]: {
+                        ...drawing,
+                        lastSync: file.modifiedTime,
+                        lastModified: file.modifiedTime,
+                      } as IDrawing,
+                    });
+                  }
+                }
+              } catch (error) {
+                XLogger.error("Error syncing file", file.id, file.name);
+                XLogger.error(error);
+              }
+            }
+          }
+          break;
+
         default:
           break;
       }

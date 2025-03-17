@@ -9,6 +9,7 @@ export enum MessageType {
   DELETE_DRAWING = "DELETE_DRAWING",
   EXPORT_STORE = "EXPORT_STORE",
   CLEANUP_FILES = "CLEANUP_FILES",
+  LOGIN_RESULT = "LOGIN_RESULT",
   CLEAR_DRAWING_ID = "ClearDrawingID",
   AUTO_SAVE = "MessageAutoSave",
 }
@@ -82,4 +83,9 @@ export type AutoSaveMessage = {
     name: string;
     setCurrent: boolean;
   };
+};
+
+export type LoginResultMessage = {
+  type: MessageType.LOGIN_RESULT;
+  payload: any;
 };

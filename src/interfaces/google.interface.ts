@@ -11,3 +11,25 @@ export interface GoogleUserMe {
 export interface GoogleModifyFileResponse {
   modifiedTime?: string;
 }
+
+export interface GoogleDriveFileMetadata {
+  id: string;
+  name: string;
+  modifiedTime: string;
+  properties:
+    | {
+        excalisaveId: string;
+        hash: string;
+      }
+    | undefined;
+}
+
+export interface GoogleDriveFilesMetadataResponse {
+  files: GoogleDriveFileMetadata[];
+  nextPageToken?: string;
+}
+
+export interface GoogleCreateFolderResponse {
+  id: string;
+  name: string;
+}

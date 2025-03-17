@@ -1,9 +1,5 @@
 import React from "react";
-
-type IconProps = {
-  size?: number;
-  color?: string;
-};
+import IconProps from "./icon-props.types";
 
 export const GoogleDriveIcon = ({ size = 16, color = "#fff" }: IconProps) => {
   return (

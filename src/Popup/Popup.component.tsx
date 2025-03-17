@@ -337,12 +337,19 @@ const Popup: React.FC = () => {
           inExcalidrawPage={inExcalidrawPage}
           currentDrawing={currentDrawing}
           userInfo={userInfo}
-          onLogout={() => {
+          onLogout={async () => {
             setRestorePoint({
               searchTerm,
               sidebarSelected: sidebarSelected || "All",
               profileUrl: null,
             });
+
+            await Promise.allSettled([
+              (browser.identity as any).clearAllCachedAuthTokens(),
+              browser.storage.local.remove("cloudFolderId"),
+            ]);
+
+            window.close();
           }}
           isLiveCollaboration={isLiveCollaboration}
           onSaveDrawing={handleSaveCurrentDrawing}

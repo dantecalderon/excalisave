@@ -23,11 +23,12 @@ import {
 } from "@radix-ui/themes";
 import React, { ReactElement, useEffect, useState } from "react";
 import { browser } from "webextension-polyfill-ts";
+import { MessageType } from "../../constants/message.types";
 import { IDrawing } from "../../interfaces/drawing.interface";
 import { GoogleUserMe } from "../../interfaces/google.interface";
 import { DrawingStore } from "../../lib/drawing-store";
 import { GoogleDriveApi } from "../../lib/google-drive-api";
-import { GoogleDriveIcon } from "../Icons/GDrive.icon";
+import { CloudDownloadIcon, CloudUploadIcon } from "../Icons/Cloud.icons";
 import "./Navbar.styles.scss";
 
 const DialogDescription = Dialog.Description as any;
@@ -136,36 +137,40 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
       <DropdownMenu.Root>
         <Flex>
           <Flex className="Navbar__ActionButton">
-            {(props.userInfo || !props.currentDrawing) && ( // Only show button to save to cloud or new drawing.
+            {props.userInfo && props.currentDrawing && (
+              <>
+                <IconButton
+                  onClick={() => props.onSaveDrawing()}
+                  disabled={
+                    !props.inExcalidrawPage ||
+                    props.isLoading ||
+                    props.isLiveCollaboration ||
+                    !unsavedChanges
+                  }
+                  color="green"
+                  radius="full"
+                >
+                  <CloudUploadIcon size={18} />
+                </IconButton>
+                <IconButton color="orange" radius="full">
+                  <CloudDownloadIcon size={18} />
+                </IconButton>
+              </>
+            )}
+            {!props.currentDrawing && (
               <Button
                 className="Navbar__ActionButton__SaveButton"
                 disabled={
                   !props.inExcalidrawPage ||
                   props.isLoading ||
-                  props.isLiveCollaboration ||
-                  (props.userInfo && props.currentDrawing && !unsavedChanges)
+                  props.isLiveCollaboration
                 }
                 onClick={() => {
-                  if (props.currentDrawing) {
-                    props.onSaveDrawing();
-                  } else {
-                    setIsCreateDialogOpen(true);
-                  }
+                  setIsCreateDialogOpen(true);
                 }}
-                color={props.userInfo ? "green" : undefined}
               >
-                {props.userInfo && <GoogleDriveIcon />}
-                {props.currentDrawing ? "Save" : "Save As..."}
+                Save As...
               </Button>
-            )}
-            {unsavedChanges && (
-              <Text
-                color="gray"
-                className="Navbar__ActionButton__UnsavedChanges"
-              >
-                <InfoCircledIcon width={"10"} height={"10"} />
-                Unsaved changes
-              </Text>
             )}
             <DropdownMenu.Trigger
               disabled={
@@ -207,9 +212,13 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                       disabled={isLogin || !props.inExcalidrawPage}
                       onClick={async () => {
                         setIsLogin(true);
-                        await GoogleDriveApi.login();
-                        setIsLogin(false);
+                        const result = await GoogleDriveApi.login();
+                        await browser.runtime.sendMessage({
+                          type: MessageType.LOGIN_RESULT,
+                          payload: result,
+                        });
 
+                        setIsLogin(false);
                         window.close();
                       }}
                       radius="full"
@@ -270,12 +279,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                 {props.userInfo?.email}
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
-              <DropdownMenu.Item
-                onClick={() => {
-                  (browser.identity as any).clearAllCachedAuthTokens();
-                  window.location.reload();
-                }}
-              >
+              <DropdownMenu.Item onClick={props.onLogout}>
                 Log Out
               </DropdownMenu.Item>
             </DropdownMenu.Content>
