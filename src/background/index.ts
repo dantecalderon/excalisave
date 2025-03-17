@@ -195,17 +195,18 @@ browser.runtime.onMessage.addListener(
           if (message.payload.saveToCloud) {
             XLogger.log("Renaming file in cloud");
 
-            const cloudFile = await GoogleDriveApi.findByExcalisaveId(
-              message.payload.id
-            );
+            const cloudFileMetadata =
+              await GoogleDriveApi.findFileMetadataByExcalisaveId(
+                message.payload.id
+              );
 
-            if (!cloudFile?.[0]?.id) {
+            if (!cloudFileMetadata) {
               XLogger.error("No cloud file found with id");
               return;
             }
 
             await GoogleDriveApi.renameFile(
-              cloudFile[0].id,
+              cloudFileMetadata.id,
               message.payload.name
             );
 

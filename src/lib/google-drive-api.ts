@@ -1,20 +1,21 @@
-import axios from "redaxios";
 import { browser } from "webextension-polyfill-ts";
 import { IDrawingExport } from "../interfaces/drawing-export.interface";
 import {
+  CloudFileId,
   GoogleApiErrorResponse,
+  GoogleCreateFileResponse,
   GoogleCreateFolderResponse,
   GoogleDriveFilesMetadataResponse,
-  GoogleModifyFileResponse,
+  GoogleFileMetadataProperties,
+  GoogleFilesDetailsResponse,
+  GoogleFileModifiedResponse,
 } from "../interfaces/google.interface";
 import { XLogger } from "./logger";
 import { isValidDateString } from "./utils/date.utils";
 
 const BASE_URL = "https://www.googleapis.com";
 
-const api = axios.create({
-  baseURL: BASE_URL,
-});
+const logger = XLogger.get("GoogleDriveApi");
 
 async function handleApiError(
   response: Response,
@@ -22,14 +23,18 @@ async function handleApiError(
 ) {
   if (response.ok) return;
 
+  logger.error("Error in response", response);
+
   const errorJson: GoogleApiErrorResponse = await response.json();
+
+  logger.error("Error in JSON", errorJson);
 
   if ([401, 403].includes(errorJson?.error?.code)) {
     await (browser.identity as any).clearAllCachedAuthTokens();
 
-    XLogger.error("GoogleDriveApi: Unauthorized: Logging out", errorJson);
+    logger.error("Unauthorized. Logging out", errorJson);
 
-    throw new Error("GoogleDriveApi: Unauthorized");
+    throw new Error(errorJson?.error?.message || defaultMessage);
   }
 
   throw new Error(errorJson?.error?.message || defaultMessage);
@@ -44,9 +49,52 @@ export class GoogleDriveApi {
 
       return token;
     } catch (error) {
-      XLogger.error("Error getting token", error);
+      logger.error("Error getting token", error);
       throw new Error("Failed to get token");
     }
+  }
+
+  /**
+   * Create a new file in the drive. It doesn't save the content of the file, only the metadata.
+   *
+   * @param name The name of the file to be created.
+   * @param metadata Metadata to be saved in the file.
+   */
+  private static async createNewFile(
+    name: string,
+    metadata: GoogleFileMetadataProperties
+  ): Promise<CloudFileId> {
+    logger.info("Creating new file in Drive", { name, metadata });
+
+    const folderId = await GoogleDriveApi.getOrCreateFolderId();
+
+    const token = await GoogleDriveApi.getToken();
+
+    const response = await fetch(`${BASE_URL}/drive/v3/files`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+      body: JSON.stringify({
+        name: name + ".excalidraw",
+        parents: folderId ? [folderId] : [],
+        mimeType: "application/json",
+        properties: {
+          // Identifier to identify the file in the cloud with the local one
+          excalisaveId: metadata.excalisaveId,
+          // Hash of the file content to know if the file has been modified
+          hash: metadata.hash,
+        },
+      }),
+    });
+
+    await handleApiError(response, "Error creating file in Drive");
+
+    const responseJson: GoogleCreateFileResponse = await response.json();
+
+    logger.info("Created file in Drive", responseJson);
+
+    return responseJson.id;
   }
 
   /**
@@ -97,7 +145,7 @@ export class GoogleDriveApi {
         },
       };
     } catch (error) {
-      XLogger.error("Login failed due to an error:", error);
+      logger.error("Login failed due to an error:", error);
 
       return {
         success: false,
@@ -109,24 +157,31 @@ export class GoogleDriveApi {
     }
   }
 
+  /**
+   * Get the folder 'excalisave' in the root of the drive. If it doesn't exist, it will be created.
+   * It caches the folderId in the browser storage, so it avoids to fetch it from the drive every time.
+   *
+   * @param folderName The name of the folder to get or create. @default 'excalisave'
+   * @returns The id of the folder.
+   */
   static async getOrCreateFolderId(
     folderName: string = "excalisave"
   ): Promise<string> {
-    XLogger.debug("GoogleDriveApi: Fetching folderId from cache");
+    logger.debug("GoogleDriveApi: Fetching folderId from cache");
 
     const cachedFolderId = (await browser.storage.local.get("cloudFolderId"))[
       "cloudFolderId"
     ];
 
     if (cachedFolderId) {
-      XLogger.debug("GoogleDriveApi: Using cached folderId", cachedFolderId);
+      logger.debug("GoogleDriveApi: Using cached folderId", cachedFolderId);
 
       return cachedFolderId;
     }
 
     const token = await GoogleDriveApi.getToken();
 
-    XLogger.debug(
+    logger.debug(
       `GoogleDriveApi: folderId not found in cache, fetching folder by name ${folderName}`
     );
 
@@ -152,14 +207,14 @@ export class GoogleDriveApi {
         cloudFolderId: responseJson.files[0].id,
       });
 
-      XLogger.debug(`GoogleDriveApi: Found folderId by name ${folderName}`);
+      logger.debug(`GoogleDriveApi: Found folderId by name ${folderName}`);
 
       return responseJson.files[0].id;
     }
 
     // If not found by name, create it
 
-    XLogger.debug(
+    logger.debug(
       `GoogleDriveApi: Folder not found by name ${folderName}, creating it`
     );
 
@@ -185,7 +240,7 @@ export class GoogleDriveApi {
       throw new Error("Failed to create folder");
     }
 
-    XLogger.debug(
+    logger.debug(
       `GoogleDriveApi: Created folder ${folderName} with id ${responseCreateJson.id}`
     );
 
@@ -201,7 +256,7 @@ export class GoogleDriveApi {
 
     const token = await GoogleDriveApi.getToken();
 
-    XLogger.debug("Fetching All Files: /drive/v3/files");
+    logger.debug("Fetching All Files: /drive/v3/files");
 
     const response = await fetch(
       `${BASE_URL}/drive/v3/files?q='${folderId}' in parents and trashed=false&fields=files(id,name,modifiedTime,properties)&pageSize=1000`,
@@ -218,7 +273,7 @@ export class GoogleDriveApi {
     const responseJson: GoogleDriveFilesMetadataResponse =
       await response.json();
 
-    XLogger.debug("Response", responseJson);
+    logger.debug("Response", responseJson);
 
     let files = responseJson.files.filter((file) => {
       return file.properties?.excalisaveId !== undefined;
@@ -249,128 +304,96 @@ export class GoogleDriveApi {
     return files;
   }
 
-  private static async request(
-    path: string,
-    method: string = "GET",
-    body?: any
-  ) {
+  static async getAuthenticatedUser() {
     const token = await GoogleDriveApi.getToken();
 
-    const result = await fetch("https://www.googleapis.com" + path, {
-      method,
-      body,
+    const response = await fetch(`${BASE_URL}/userinfo/v2/me`, {
+      method: "GET",
       headers: {
         Authorization: "Bearer " + token,
       },
     });
 
-    await handleApiError(result);
+    await handleApiError(response);
 
-    return result.json();
-  }
+    const responseJson = await response.json();
 
-  static async getAuthenticatedUser() {
-    const response = await GoogleDriveApi.request("/userinfo/v2/me");
+    logger.info("Authenticated user", responseJson);
 
-    XLogger.info("Authenticated user", response);
-
-    return response;
+    return responseJson;
   }
 
   /**
-   * Check if a file exists in the drive with the given excalisaveId.
-   * (Different from the file id in Google Drive).
+   * Check if a file exists in the drive by the given excalisaveId.
    *
    * We store a custom property 'excalisaveId' in the Google Drive file metadata to track the local drawing ID.
    * @param excalisaveId The local id of the drawing.
    */
-  static async findByExcalisaveId(excalisaveId: string) {
+  static async findFileMetadataByExcalisaveId(
+    excalisaveId: string
+  ): Promise<GoogleFilesDetailsResponse["files"][0] | undefined> {
     const token = await GoogleDriveApi.getToken();
 
-    const response = await api.get("/drive/v3/files", {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
-      params: {
-        q: `properties has { key='excalisaveId' and value='${excalisaveId}' }`,
-      },
-    });
+    const response = await fetch(
+      `${BASE_URL}/drive/v3/files?q=properties has { key='excalisaveId' and value='${excalisaveId}' }`,
+      {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      }
+    );
 
-    XLogger.debug("File exists", response.data);
+    await handleApiError(response, "Error finding file by excalisaveId");
 
-    return response.data.files;
+    const responseJson: GoogleFilesDetailsResponse = await response.json();
+
+    if (responseJson.files.length === 0) {
+      logger.warn("File not found", { excalisaveId });
+
+      return undefined;
+    }
+
+    return responseJson.files[0];
   }
 
+  /**
+   * Save content of a file to Google Drive. If the file doesn't exist, it will be created.
+   *
+   * @param file The file content to save.
+   * @param hash The hash of the current file content.
+   * @returns
+   */
   static async saveFileToDrive(file: IDrawingExport, hash: string) {
     try {
-      const folderId = await GoogleDriveApi.getOrCreateFolderId();
-
-      const token = await GoogleDriveApi.getToken();
-
       const localId = file.excalisave.id;
 
-      const cloudFile = await GoogleDriveApi.findByExcalisaveId(localId);
+      const cloudFileMetadata =
+        await GoogleDriveApi.findFileMetadataByExcalisaveId(localId);
 
-      console.log("File exists??", cloudFile);
-
-      let cloudFileId = cloudFile?.[0]?.id;
-
-      const cloudFileName = cloudFile?.[0]?.name?.split?.(".excalidraw")?.[0];
-      console.log("Cloud file name", cloudFileName, file.excalisave.name);
-
-      if (
-        cloudFileId &&
-        typeof cloudFileName === "string" &&
-        cloudFileName !== file.excalisave.name
-      ) {
-        XLogger.info("File already exists in drive", cloudFile);
-        await GoogleDriveApi.renameFile(
-          cloudFileId,
-          file.excalisave.name + ".excalidraw"
-        );
-      }
+      let cloudFileId = cloudFileMetadata?.id;
 
       if (!cloudFileId) {
-        // First create the file metadata
-        const response = await api.post(
-          "/drive/v3/files",
-          {
-            name: file.excalisave.name + ".excalidraw",
-            parents: folderId ? [folderId] : [],
-            mimeType: "application/json",
-            description: localId,
-            properties: {
-              // Save the local id of the drawing to be able to modify the file later
-              excalisaveId: localId,
-              hash,
-            },
-          },
-          {
-            headers: {
-              Authorization: "Bearer " + token,
-            },
-            params: {
-              fields: "id, name, createdTime, modifiedTime, size, properties",
-            },
-          }
-        );
+        logger.info("File not found in Drive, creating it...");
 
-        XLogger.info("Created file metadata in drive", response.data);
-
-        cloudFileId = response.data.id;
+        cloudFileId = await GoogleDriveApi.createNewFile(file.excalisave.name, {
+          excalisaveId: localId,
+          hash,
+        });
       }
 
-      const modifyFileResponse = await GoogleDriveApi.modifyFile(
+      logger.info("Uploading file content in Drive", { cloudFileId });
+
+      const modifiedFile = await GoogleDriveApi.modifyFile(
         cloudFileId,
         file,
         hash
       );
 
-      XLogger.info("Modified file in drive", modifyFileResponse);
+      logger.info("Modified file in Drive", modifiedFile);
 
-      return modifyFileResponse;
+      return modifiedFile;
     } catch (error) {
-      XLogger.error("Error saving file to drive", error);
+      logger.error("Error saving file to drive", error);
       console.error(error);
       // throw new Error("Failed to save file to drive");
       return undefined;
@@ -393,7 +416,7 @@ export class GoogleDriveApi {
 
     const responseJson = await response.json();
 
-    XLogger.debug("File", responseJson);
+    logger.debug("File", responseJson);
 
     return responseJson;
   }
@@ -426,11 +449,11 @@ export class GoogleDriveApi {
     return response.json();
   }
 
-  static async modifyFile(
+  private static async modifyFile(
     fileId: string,
     file: IDrawingExport,
     hash: string
-  ): Promise<GoogleModifyFileResponse> {
+  ): Promise<GoogleFileModifiedResponse> {
     const token = await GoogleDriveApi.getToken();
 
     const metadata = new Blob(
@@ -464,16 +487,13 @@ export class GoogleDriveApi {
       }
     );
 
-    await handleApiError(
-      uploadResponse,
-      "Failed to upload file content: " + (await uploadResponse.text())
-    );
+    await handleApiError(uploadResponse, "Failed to upload file content");
 
-    XLogger.debug("Upload response", uploadResponse);
+    logger.debug("Upload response", uploadResponse);
 
     const response = await uploadResponse.json();
 
-    XLogger.info("Uploaded file content to drive", response);
+    logger.info("Uploaded file content to drive", response);
 
     if (!isValidDateString(response?.modifiedTime)) {
       return {};
@@ -482,19 +502,23 @@ export class GoogleDriveApi {
     return response;
   }
 
-  static async deleteFile(localFileId: string): Promise<void> {
+  static async deleteFile(excalisaveId: string): Promise<void> {
     try {
       const token = await GoogleDriveApi.getToken();
 
-      const cloudFile = await GoogleDriveApi.findByExcalisaveId(localFileId);
+      const cloudFileMetadata =
+        await GoogleDriveApi.findFileMetadataByExcalisaveId(excalisaveId);
 
-      if (!cloudFile?.[0]?.id) {
-        XLogger.error("No cloud file found with id", localFileId);
+      if (!cloudFileMetadata) {
+        logger.error("File not found in Drive, skipping deletion", {
+          excalisaveId,
+        });
+
         return;
       }
 
       const response = await fetch(
-        `${BASE_URL}/drive/v3/files/${cloudFile[0].id}`,
+        `${BASE_URL}/drive/v3/files/${cloudFileMetadata.id}`,
         {
           method: "PATCH",
           headers: {
@@ -509,12 +533,16 @@ export class GoogleDriveApi {
 
       await handleApiError(
         response,
-        `Failed to move file '${localFileId}' to trash`
+        `Failed to move file '${excalisaveId}' to trash`
       );
 
-      XLogger.info("Moved file to trash");
+      logger.info("File moved to Trash in Drive", {
+        excalisaveId,
+        cloudFileMetadata,
+      });
     } catch (error) {
-      XLogger.error("Error deleting file", error);
+      logger.error("Error deleting file", error);
+
       throw new Error("Failed to delete file");
     }
   }

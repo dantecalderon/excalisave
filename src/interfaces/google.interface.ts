@@ -1,3 +1,5 @@
+export type CloudFileId = string;
+
 export interface GoogleUserMe {
   id: string;
   email: string;
@@ -8,7 +10,30 @@ export interface GoogleUserMe {
   verified_email: boolean;
 }
 
-export interface GoogleModifyFileResponse {
+export interface GoogleCreateFileResponse {
+  id: string;
+  kind: string;
+  mimeType: string;
+  name: string;
+}
+
+// Properties added to the drawing files in `properties`
+export interface GoogleFileMetadataProperties {
+  excalisaveId: string;
+  hash: string;
+}
+
+// Used to fetch the details and properties of the files. It doesn't include the file content.
+export interface GoogleFilesDetailsResponse {
+  files: {
+    id: CloudFileId;
+    name: string;
+    modifiedTime?: string;
+    properties: GoogleFileMetadataProperties;
+  }[];
+}
+
+export interface GoogleFileModifiedResponse {
   modifiedTime?: string;
 }
 
@@ -34,21 +59,17 @@ export interface GoogleCreateFolderResponse {
   name: string;
 }
 
-interface GoogleApiErrorDetail {
-  message: string;
-  domain: string;
-  reason: string;
-  location?: string;
-  locationType?: string;
-}
-
-interface GoogleApiError {
-  code: number;
-  message: string;
-  errors: GoogleApiErrorDetail[];
-  status?: string;
-}
-
 export interface GoogleApiErrorResponse {
-  error: GoogleApiError;
+  error: {
+    code: number;
+    message: string;
+    errors: {
+      message: string;
+      domain: string;
+      reason: string;
+      location?: string;
+      locationType?: string;
+    }[];
+    status?: string;
+  };
 }
