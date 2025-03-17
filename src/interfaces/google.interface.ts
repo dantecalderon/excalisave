@@ -33,3 +33,22 @@ export interface GoogleCreateFolderResponse {
   id: string;
   name: string;
 }
+
+interface GoogleApiErrorDetail {
+  message: string;
+  domain: string;
+  reason: string;
+  location?: string;
+  locationType?: string;
+}
+
+interface GoogleApiError {
+  code: number;
+  message: string;
+  errors: GoogleApiErrorDetail[];
+  status?: string;
+}
+
+export interface GoogleApiErrorResponse {
+  error: GoogleApiError;
+}

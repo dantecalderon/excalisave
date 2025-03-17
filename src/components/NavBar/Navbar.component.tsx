@@ -152,7 +152,7 @@ export function NavBar({ SearchComponent, ...props }: NavBarProps) {
                 >
                   <CloudUploadIcon size={18} />
                 </IconButton>
-                <IconButton color="orange" radius="full">
+                <IconButton disabled color="orange" radius="full">
                   <CloudDownloadIcon size={18} />
                 </IconButton>
               </>

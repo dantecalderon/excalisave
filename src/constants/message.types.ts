@@ -87,5 +87,19 @@ export type AutoSaveMessage = {
 
 export type LoginResultMessage = {
   type: MessageType.LOGIN_RESULT;
-  payload: any;
+  payload:
+    | {
+        success: true;
+        details: {
+          grantedScopes: string[];
+          token: string;
+        };
+      }
+    | {
+        success: false;
+        details: {
+          error: string;
+          stack: string;
+        };
+      };
 };

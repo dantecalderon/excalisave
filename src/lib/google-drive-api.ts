@@ -2,6 +2,7 @@ import axios from "redaxios";
 import { browser } from "webextension-polyfill-ts";
 import { IDrawingExport } from "../interfaces/drawing-export.interface";
 import {
+  GoogleApiErrorResponse,
   GoogleCreateFolderResponse,
   GoogleDriveFilesMetadataResponse,
   GoogleModifyFileResponse,
@@ -14,6 +15,25 @@ const BASE_URL = "https://www.googleapis.com";
 const api = axios.create({
   baseURL: BASE_URL,
 });
+
+async function handleApiError(
+  response: Response,
+  defaultMessage: string = "GoogleDriveApi: Unknow error"
+) {
+  if (response.ok) return;
+
+  const errorJson: GoogleApiErrorResponse = await response.json();
+
+  if ([401, 403].includes(errorJson?.error?.code)) {
+    await (browser.identity as any).clearAllCachedAuthTokens();
+
+    XLogger.error("GoogleDriveApi: Unauthorized: Logging out", errorJson);
+
+    throw new Error("GoogleDriveApi: Unauthorized");
+  }
+
+  throw new Error(errorJson?.error?.message || defaultMessage);
+}
 
 export class GoogleDriveApi {
   private static async getToken(): Promise<string> {
@@ -46,7 +66,22 @@ export class GoogleDriveApi {
     }
   }
 
-  static async login() {
+  static async login(): Promise<
+    | {
+        success: true;
+        details: {
+          token: string;
+          grantedScopes: string[];
+        };
+      }
+    | {
+        success: false;
+        details: {
+          error: string;
+          stack: string;
+        };
+      }
+  > {
     try {
       const { token, grantedScopes } = await (
         browser.identity as any
@@ -104,6 +139,11 @@ export class GoogleDriveApi {
       }
     );
 
+    await handleApiError(
+      response,
+      `Error fetching folderId by name ${folderName}`
+    );
+
     const responseJson: GoogleDriveFilesMetadataResponse =
       await response.json();
 
@@ -135,6 +175,8 @@ export class GoogleDriveApi {
         parents: ["root"],
       }),
     });
+
+    await handleApiError(responseCreate, `Error creating folder ${folderName}`);
 
     const responseCreateJson: GoogleCreateFolderResponse =
       await responseCreate.json();
@@ -170,6 +212,8 @@ export class GoogleDriveApi {
         },
       }
     );
+
+    await handleApiError(response);
 
     const responseJson: GoogleDriveFilesMetadataResponse =
       await response.json();
@@ -220,9 +264,7 @@ export class GoogleDriveApi {
       },
     });
 
-    if (!result.ok) {
-      throw new Error("Failed to request " + path);
-    }
+    await handleApiError(result);
 
     return result.json();
   }
@@ -347,6 +389,8 @@ export class GoogleDriveApi {
       }
     );
 
+    await handleApiError(response);
+
     const responseJson = await response.json();
 
     XLogger.debug("File", responseJson);
@@ -374,9 +418,10 @@ export class GoogleDriveApi {
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to rename file '${fileId}' to '${newFilename}'`);
-    }
+    await handleApiError(
+      response,
+      `Failed to rename file '${fileId}' to '${newFilename}'`
+    );
 
     return response.json();
   }
@@ -419,11 +464,10 @@ export class GoogleDriveApi {
       }
     );
 
-    if (!uploadResponse.ok) {
-      throw new Error(
-        "Failed to upload file content: " + (await uploadResponse.text())
-      );
-    }
+    await handleApiError(
+      uploadResponse,
+      "Failed to upload file content: " + (await uploadResponse.text())
+    );
 
     XLogger.debug("Upload response", uploadResponse);
 
@@ -463,9 +507,10 @@ export class GoogleDriveApi {
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`Failed to move  file '${localFileId}'`);
-      }
+      await handleApiError(
+        response,
+        `Failed to move file '${localFileId}' to trash`
+      );
 
       XLogger.info("Moved file to trash");
     } catch (error) {

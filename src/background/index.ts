@@ -278,6 +278,25 @@ browser.runtime.onMessage.addListener(
           XLogger.log("Login result", message.payload);
 
           if (message.payload.success) {
+            if (
+              !message.payload.details.grantedScopes.includes(
+                "https://www.googleapis.com/auth/drive.file"
+              )
+            ) {
+              XLogger.error(
+                "Invalid scopes",
+                message.payload.details.grantedScopes
+              );
+
+              await (browser.identity as any).clearAllCachedAuthTokens();
+              return;
+            }
+
+            // Clear the cloud folder id if exists to force check for folder
+            await browser.storage.local.set({
+              cloudFolderId: undefined,
+            });
+
             const filesFromCloud = await GoogleDriveApi.getAllFiles();
 
             XLogger.debug("Files from cloud", filesFromCloud);
