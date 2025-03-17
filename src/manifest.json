@@ -25,7 +25,8 @@
     "storage",
     "scripting",
     "unlimitedStorage",
-    "identity"
+    "identity",
+    "identity.email"
   ],
   "__chrome|firefox__author": "atharvakadlag",
   "__opera__developer": {

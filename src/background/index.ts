@@ -4,6 +4,7 @@ import {
   CleanupFilesMessage,
   DeleteDrawingMessage,
   LoginResultMessage,
+  LogoutMessage,
   MessageType,
   RenameDrawingMessage,
   SaveDrawingMessage,
@@ -17,9 +18,12 @@ import { GoogleDriveApi } from "../lib/google-drive-api";
 import { IDrawingExport } from "../interfaces/drawing-export.interface";
 import { hashJSON } from "../lib/utils/json.utils";
 import { runActionScript } from "../action-scripts/action-scripts";
+import { updatePartialRestorePoint } from "../Popup/hooks/useRestorePoint.hook";
+
+const logger = XLogger.get("Background");
 
 browser.runtime.onInstalled.addListener(async () => {
-  XLogger.log("onInstalled...");
+  logger.log("onInstalled...");
 
   for (const cs of (browser.runtime.getManifest() as any).content_scripts) {
     for (const tab of await browser.tabs.query({ url: cs.matches })) {
@@ -40,11 +44,11 @@ browser.runtime.onMessage.addListener(
       | RenameDrawingMessage
       | DeleteDrawingMessage
       | AutoSaveMessage
-      | LoginResultMessage,
-    _sender: any
+      | LoginResultMessage
+      | LogoutMessage
   ) => {
     try {
-      XLogger.log("Mesage brackground", message);
+      logger.log("Mesage brackground", message);
       if (!message || !message.type) return;
 
       switch (message.type) {
@@ -72,7 +76,7 @@ browser.runtime.onMessage.addListener(
           )[message.payload.id] as IDrawing;
 
           if (!currentDrawing) {
-            XLogger.error("No drawing found with id", message.payload.id);
+            logger.error("No drawing found with id", message.payload.id);
             return;
           }
 
@@ -128,7 +132,7 @@ browser.runtime.onMessage.addListener(
           }
 
           if (message.payload.saveToCloud) {
-            XLogger.log("Saving to cloud", message.payload.id);
+            logger.log("Saving to cloud", message.payload.id);
             const saveResponse = await GoogleDriveApi.saveFileToDrive(
               {
                 elements: newDrawingHashData.elements,
@@ -149,7 +153,7 @@ browser.runtime.onMessage.addListener(
               newDrawingHash
             );
 
-            XLogger.log("Saved to cloud", message.payload.id);
+            logger.log("Saved to cloud", message.payload.id);
 
             if (saveResponse.modifiedTime) {
               const currentDrawing = (
@@ -171,7 +175,7 @@ browser.runtime.onMessage.addListener(
           break;
 
         case MessageType.RENAME_DRAWING:
-          XLogger.debug("Renaming drawing", {
+          logger.debug("Renaming drawing", {
             id: message.payload.id,
             newName: message.payload.name,
           });
@@ -181,7 +185,7 @@ browser.runtime.onMessage.addListener(
           )[message.payload.id] as IDrawing;
 
           if (!drawingToUpdate) {
-            XLogger.error("No drawing found with id", message.payload.id);
+            logger.error("No drawing found with id", message.payload.id);
             return;
           }
 
@@ -193,7 +197,7 @@ browser.runtime.onMessage.addListener(
           });
 
           if (message.payload.saveToCloud) {
-            XLogger.log("Renaming file in cloud");
+            logger.log("Renaming file in cloud");
 
             const cloudFileMetadata =
               await GoogleDriveApi.findFileMetadataByExcalisaveId(
@@ -201,7 +205,7 @@ browser.runtime.onMessage.addListener(
               );
 
             if (!cloudFileMetadata) {
-              XLogger.error("No cloud file found with id");
+              logger.error("No cloud file found with id");
               return;
             }
 
@@ -210,13 +214,13 @@ browser.runtime.onMessage.addListener(
               message.payload.name
             );
 
-            XLogger.log("Renamed file in cloud");
+            logger.log("Renamed file in cloud");
           }
 
           break;
 
         case MessageType.DELETE_DRAWING:
-          XLogger.log("Deleting drawing", message.payload.id);
+          logger.log("Deleting drawing", message.payload.id);
           if (message.payload.saveToCloud) {
             await GoogleDriveApi.deleteFile(message.payload.id);
           }
@@ -224,7 +228,7 @@ browser.runtime.onMessage.addListener(
           break;
 
         case MessageType.CLEANUP_FILES:
-          XLogger.info("Cleaning up unused files...");
+          logger.info("Cleaning up unused files...");
 
           const drawings = Object.values(
             await browser.storage.local.get()
@@ -241,7 +245,7 @@ browser.runtime.onMessage.addListener(
 
           const uniqueImagesUsed = Array.from(new Set(imagesUsed));
 
-          XLogger.log("Used fileIds", uniqueImagesUsed);
+          logger.log("Used fileIds", uniqueImagesUsed);
 
           await runActionScript(
             "delete-unused-files-from-store",
@@ -257,11 +261,11 @@ browser.runtime.onMessage.addListener(
         case MessageType.AUTO_SAVE:
           const name = message.payload.name;
           const setCurrent = message.payload.setCurrent;
-          XLogger.log("Saving new drawing", { name });
+          logger.log("Saving new drawing", { name });
           const activeTab = await TabUtils.getActiveTab();
 
           if (!activeTab) {
-            XLogger.warn("No active tab found");
+            logger.warn("No active tab found");
             return;
           }
 
@@ -276,7 +280,7 @@ browser.runtime.onMessage.addListener(
           break;
 
         case MessageType.LOGIN_RESULT:
-          XLogger.log("Login result", message.payload);
+          logger.log("Login result", message.payload);
 
           if (message.payload.success) {
             if (
@@ -284,7 +288,7 @@ browser.runtime.onMessage.addListener(
                 "https://www.googleapis.com/auth/drive.file"
               )
             ) {
-              XLogger.error(
+              logger.error(
                 "Invalid scopes",
                 message.payload.details.grantedScopes
               );
@@ -293,6 +297,13 @@ browser.runtime.onMessage.addListener(
               return;
             }
 
+            const user = await GoogleDriveApi.getAuthenticatedUser();
+            logger.info("Authenticated user", user);
+
+            await updatePartialRestorePoint({
+              profileUrl: user.picture,
+            });
+
             // Clear the cloud folder id if exists to force check for folder
             await browser.storage.local.set({
               cloudFolderId: undefined,
@@ -300,18 +311,18 @@ browser.runtime.onMessage.addListener(
 
             const filesFromCloud = await GoogleDriveApi.getAllFiles();
 
-            XLogger.debug("Files from cloud", filesFromCloud);
+            logger.debug("Files from cloud", filesFromCloud);
 
             for (const file of filesFromCloud) {
               try {
-                XLogger.debug("Checking file", file);
+                logger.debug("Checking file", file);
                 const drawing: IDrawing = (
                   await browser.storage.local.get(file.properties.excalisaveId)
                 )[file.properties.excalisaveId];
 
                 if (!drawing) {
                   // No drawing then download the save locally
-                  XLogger.debug(
+                  logger.debug(
                     "No drawing found, downloading file...",
                     file.id
                   );
@@ -351,18 +362,39 @@ browser.runtime.onMessage.addListener(
                   }
                 }
               } catch (error) {
-                XLogger.error("Error syncing file", file.id, file.name);
-                XLogger.error(error);
+                logger.error("Error syncing file", file.id, file.name);
+                logger.error(error);
               }
             }
           }
+
+          break;
+        case MessageType.LOGOUT:
+          logger.log("Logging out");
+          const drawingsToUpdate: IDrawing[] = Object.values(
+            await browser.storage.local.get()
+          ).filter((o) => o?.id?.startsWith?.("drawing:"));
+
+          logger.log("Removing lastSync date from drawings...");
+
+          for (const drawing of drawingsToUpdate) {
+            const newDrawing: IDrawing = {
+              ...drawing,
+              lastSync: undefined, // Clear the last sync date of the user.
+            };
+
+            await browser.storage.local.set({ [drawing.id]: newDrawing });
+          }
+
+          logger.log("Logged out");
+
           break;
 
         default:
           break;
       }
     } catch (error) {
-      XLogger.error("Error on background message listener", error);
+      logger.error("Error on background message listener", error);
     }
   }
 );

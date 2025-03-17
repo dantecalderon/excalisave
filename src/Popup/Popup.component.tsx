@@ -34,6 +34,7 @@ import { useRestorePoint } from "./hooks/useRestorePoint.hook";
 import "./Popup.styles.scss";
 import { GoogleDriveApi } from "../lib/google-drive-api";
 import { GoogleUserMe } from "../interfaces/google.interface";
+import { MessageType } from "../constants/message.types";
 
 const Popup: React.FC = () => {
   const [drawings, setDrawings] = React.useState<IDrawing[]>([]);
@@ -347,6 +348,9 @@ const Popup: React.FC = () => {
             await Promise.allSettled([
               (browser.identity as any).clearAllCachedAuthTokens(),
               browser.storage.local.remove("cloudFolderId"),
+              browser.runtime.sendMessage({
+                type: MessageType.LOGOUT,
+              }),
             ]);
 
             window.close();

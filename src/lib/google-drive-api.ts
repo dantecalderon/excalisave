@@ -9,6 +9,7 @@ import {
   GoogleFileMetadataProperties,
   GoogleFilesDetailsResponse,
   GoogleFileModifiedResponse,
+  GoogleUserMe,
 } from "../interfaces/google.interface";
 import { XLogger } from "./logger";
 import { isValidDateString } from "./utils/date.utils";
@@ -41,6 +42,11 @@ async function handleApiError(
 }
 
 export class GoogleDriveApi {
+  /**
+   * Get the token from the browser identity.
+   * Used to make requests to the Google Drive API.
+   * @returns The token.
+   */
   private static async getToken(): Promise<string> {
     try {
       const { token } = await (browser.identity as any).getAuthToken({
@@ -50,7 +56,8 @@ export class GoogleDriveApi {
       return token;
     } catch (error) {
       logger.error("Error getting token", error);
-      throw new Error("Failed to get token");
+
+      throw error;
     }
   }
 
@@ -95,23 +102,6 @@ export class GoogleDriveApi {
     logger.info("Created file in Drive", responseJson);
 
     return responseJson.id;
-  }
-
-  /**
-   * Check if the user is authenticated with google.
-   * @returns true if the user is authenticated, false otherwise
-   */
-  static async isUserAuthenticated(): Promise<boolean> {
-    try {
-      const { token } = await (browser.identity as any).getAuthToken({
-        interactive: false,
-      });
-
-      return !!token;
-    } catch (error) {
-      console.warn("⚠️ No hay usuario autenticado o el token expiró.", error);
-      return false;
-    }
   }
 
   static async login(): Promise<
@@ -207,7 +197,7 @@ export class GoogleDriveApi {
         cloudFolderId: responseJson.files[0].id,
       });
 
-      logger.debug(`GoogleDriveApi: Found folderId by name ${folderName}`);
+      logger.debug(`GoogleDriveApi: Found folderId by name "${folderName}"`);
 
       return responseJson.files[0].id;
     }
@@ -215,23 +205,30 @@ export class GoogleDriveApi {
     // If not found by name, create it
 
     logger.debug(
-      `GoogleDriveApi: Folder not found by name ${folderName}, creating it`
+      `GoogleDriveApi: Folder not found by name "${folderName}", creating it...`
     );
 
-    const responseCreate = await fetch("/drive/v3/files", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + token,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: folderName,
-        mimeType: "application/vnd.google-apps.folder",
-        parents: ["root"],
-      }),
-    });
+    const responseCreate = await fetch(
+      `${BASE_URL}/drive/v3/files?uploadType=multipart`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: folderName,
+          mimeType: "application/vnd.google-apps.folder",
+          parents: ["root"],
+        }),
+      }
+    );
+
+    logger.debug("Response create", responseCreate);
 
     await handleApiError(responseCreate, `Error creating folder ${folderName}`);
+
+    logger.info("Folder created", responseCreate);
 
     const responseCreateJson: GoogleCreateFolderResponse =
       await responseCreate.json();
@@ -304,8 +301,10 @@ export class GoogleDriveApi {
     return files;
   }
 
-  static async getAuthenticatedUser() {
+  static async getAuthenticatedUser(): Promise<GoogleUserMe> {
     const token = await GoogleDriveApi.getToken();
+
+    logger.info("Token is valid", token);
 
     const response = await fetch(`${BASE_URL}/userinfo/v2/me`, {
       method: "GET",
@@ -318,7 +317,7 @@ export class GoogleDriveApi {
 
     const responseJson = await response.json();
 
-    logger.info("Authenticated user", responseJson);
+    logger.info("Authenticated User", responseJson);
 
     return responseJson;
   }

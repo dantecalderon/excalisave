@@ -10,6 +10,7 @@ export enum MessageType {
   EXPORT_STORE = "EXPORT_STORE",
   CLEANUP_FILES = "CLEANUP_FILES",
   LOGIN_RESULT = "LOGIN_RESULT",
+  LOGOUT = "LOGOUT",
   CLEAR_DRAWING_ID = "ClearDrawingID",
   AUTO_SAVE = "MessageAutoSave",
 }
@@ -102,4 +103,8 @@ export type LoginResultMessage = {
           stack: string;
         };
       };
+};
+
+export type LogoutMessage = {
+  type: MessageType.LOGOUT;
 };
