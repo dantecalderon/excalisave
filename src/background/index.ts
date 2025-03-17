@@ -1,7 +1,11 @@
 import { browser } from "webextension-polyfill-ts";
 import {
+  AutoSaveMessage,
   CleanupFilesMessage,
+  DeleteDrawingMessage,
+  LoginResultMessage,
   MessageType,
+  RenameDrawingMessage,
   SaveDrawingMessage,
   SaveNewDrawingMessage,
 } from "../constants/message.types";
@@ -9,8 +13,10 @@ import { IDrawing } from "../interfaces/drawing.interface";
 import { XLogger } from "../lib/logger";
 import { TabUtils } from "../lib/utils/tab.utils";
 import { RandomUtils } from "../lib/utils/random.utils";
-import { DrawingStore } from "../lib/drawing-store";
-import { useCurrentDrawingId } from "../Popup/hooks/useCurrentDrawing.hook";
+import { GoogleDriveApi } from "../lib/google-drive-api";
+import { IDrawingExport } from "../interfaces/drawing-export.interface";
+import { hashJSON } from "../lib/utils/json.utils";
+import { runActionScript } from "../action-scripts/action-scripts";
 
 browser.runtime.onInstalled.addListener(async () => {
   XLogger.log("onInstalled...");
@@ -27,7 +33,14 @@ browser.runtime.onInstalled.addListener(async () => {
 
 browser.runtime.onMessage.addListener(
   async (
-    message: SaveDrawingMessage | SaveNewDrawingMessage | CleanupFilesMessage | any,
+    message:
+      | SaveDrawingMessage
+      | SaveNewDrawingMessage
+      | CleanupFilesMessage
+      | RenameDrawingMessage
+      | DeleteDrawingMessage
+      | AutoSaveMessage
+      | LoginResultMessage,
     _sender: any
   ) => {
     try {
@@ -53,39 +66,164 @@ browser.runtime.onMessage.addListener(
           });
           break;
 
-        case MessageType.SAVE_DRAWING:
-          const exitentDrawing = (
+        case MessageType.UPDATE_DRAWING:
+          const currentDrawing = (
             await browser.storage.local.get(message.payload.id)
           )[message.payload.id] as IDrawing;
 
-          if (!exitentDrawing) {
+          if (!currentDrawing) {
             XLogger.error("No drawing found with id", message.payload.id);
             return;
           }
 
-          const newData: IDrawing = {
-            ...exitentDrawing,
-            name: message.payload.name || exitentDrawing.name,
-            imageBase64:
-              message.payload.imageBase64 || exitentDrawing.imageBase64,
-            viewBackgroundColor:
-              message.payload.viewBackgroundColor ||
-              exitentDrawing.viewBackgroundColor,
-            data: {
-              excalidraw: message.payload.excalidraw,
-              excalidrawState: message.payload.excalidrawState,
-              versionFiles: message.payload.versionFiles,
-              versionDataState: message.payload.versionDataState,
+          // This is used to compare changes in the drawing with the current drawing
+          const newDrawingHashData: IDrawingExport = {
+            elements: JSON.parse(message.payload.excalidraw),
+            version: 2,
+            type: "excalidraw",
+            source: "https://excalidraw.com",
+            appState: {
+              gridSize: null,
+              viewBackgroundColor: message.payload.viewBackgroundColor,
             },
+            excalisave: {
+              id: message.payload.id,
+              createdAt: currentDrawing?.createdAt,
+              name: currentDrawing?.name,
+            },
+            files: {}, // Files are not needed to compare changes. Since it has
           };
 
-          await browser.storage.local.set({
-            [message.payload.id]: newData,
+          const newDrawingHash = await hashJSON(newDrawingHashData);
+
+          if (
+            newDrawingHash !== currentDrawing.hash ||
+            message.payload.excalidrawState !==
+              currentDrawing.data.excalidrawState
+          ) {
+            const newDrawing: IDrawing = {
+              ...currentDrawing,
+              name: message.payload.name || currentDrawing.name,
+              imageBase64:
+                message.payload.imageBase64 || currentDrawing.imageBase64,
+              viewBackgroundColor:
+                message.payload.viewBackgroundColor ||
+                currentDrawing.viewBackgroundColor,
+              hash: newDrawingHash,
+              lastModified:
+                newDrawingHash !== currentDrawing.hash
+                  ? new Date().toISOString()
+                  : currentDrawing.lastModified,
+              data: {
+                excalidraw: message.payload.excalidraw,
+                excalidrawState: message.payload.excalidrawState,
+                versionFiles: message.payload.versionFiles,
+                versionDataState: message.payload.versionDataState,
+              },
+            };
+
+            await browser.storage.local.set({
+              [message.payload.id]: newDrawing,
+            });
+          }
+
+          if (message.payload.saveToCloud) {
+            XLogger.log("Saving to cloud", message.payload.id);
+            const saveResponse = await GoogleDriveApi.saveFileToDrive(
+              {
+                elements: newDrawingHashData.elements,
+                version: 2,
+                type: "excalidraw",
+                source: "https://excalidraw.com",
+                appState: newDrawingHashData.appState,
+                excalisave: {
+                  createdAt: currentDrawing.createdAt,
+                  id: currentDrawing.id,
+                  name: currentDrawing.name,
+                  imageBase64:
+                    message.payload.imageBase64 || currentDrawing.imageBase64,
+                },
+                // TODO: Include files:
+                files: {},
+              },
+              newDrawingHash
+            );
+
+            XLogger.log("Saved to cloud", message.payload.id);
+
+            if (saveResponse.modifiedTime) {
+              const currentDrawing = (
+                await browser.storage.local.get(message.payload.id)
+              )[message.payload.id] as IDrawing;
+
+              const drawingToUpdate: IDrawing = {
+                ...currentDrawing,
+                lastSync: saveResponse.modifiedTime,
+                lastModified: saveResponse.modifiedTime,
+              };
+
+              await browser.storage.local.set({
+                [message.payload.id]: drawingToUpdate,
+              });
+            }
+          }
+
+          break;
+
+        case MessageType.RENAME_DRAWING:
+          XLogger.debug("Renaming drawing", {
+            id: message.payload.id,
+            newName: message.payload.name,
           });
+
+          const drawingToUpdate = (
+            await browser.storage.local.get(message.payload.id)
+          )[message.payload.id] as IDrawing;
+
+          if (!drawingToUpdate) {
+            XLogger.error("No drawing found with id", message.payload.id);
+            return;
+          }
+
+          await browser.storage.local.set({
+            [message.payload.id]: {
+              ...drawingToUpdate,
+              name: message.payload.name,
+            },
+          });
+
+          if (message.payload.saveToCloud) {
+            XLogger.log("Renaming file in cloud");
+
+            const cloudFile = await GoogleDriveApi.findByExcalisaveId(
+              message.payload.id
+            );
+
+            if (!cloudFile?.[0]?.id) {
+              XLogger.error("No cloud file found with id");
+              return;
+            }
+
+            await GoogleDriveApi.renameFile(
+              cloudFile[0].id,
+              message.payload.name
+            );
+
+            XLogger.log("Renamed file in cloud");
+          }
+
+          break;
+
+        case MessageType.DELETE_DRAWING:
+          XLogger.log("Deleting drawing", message.payload.id);
+          if (message.payload.saveToCloud) {
+            await GoogleDriveApi.deleteFile(message.payload.id);
+          }
+
           break;
 
         case MessageType.CLEANUP_FILES:
-          XLogger.info("Cleaning up files");
+          XLogger.info("Cleaning up unused files...");
 
           const drawings = Object.values(
             await browser.storage.local.get()
@@ -94,7 +232,7 @@ browser.runtime.onMessage.addListener(
           const imagesUsed = drawings
             .map((drawing) => {
               return JSON.parse(drawing.data.excalidraw).filter(
-                (item: any) => item.type === "image"
+                (item: any) => item.type === "image" && item.fileId
               );
             })
             .flat()
@@ -104,25 +242,18 @@ browser.runtime.onMessage.addListener(
 
           XLogger.log("Used fileIds", uniqueImagesUsed);
 
-          // This workaround is to pass params to script, it's ugly but it works
-          await browser.scripting.executeScript({
-            target: {
-              tabId: message.payload.tabId,
-            },
-            func: (fileIds: string[], executionTimestamp: number) => {
-              window.__SCRIPT_PARAMS__ = { fileIds, executionTimestamp };
-            },
-            args: [uniqueImagesUsed, message.payload.executionTimestamp],
-          });
-
-          await browser.scripting.executeScript({
-            target: { tabId: message.payload.tabId },
-            files: ["./js/execute-scripts/delete-unused-files.bundle.js"],
-          });
+          await runActionScript(
+            "delete-unused-files-from-store",
+            message.payload.tabId,
+            {
+              fileIds: uniqueImagesUsed,
+              executionTimestamp: message.payload.executionTimestamp,
+            }
+          );
 
           break;
 
-        case "MessageAutoSave":
+        case MessageType.AUTO_SAVE:
           const name = message.payload.name;
           const setCurrent = message.payload.setCurrent;
           XLogger.log("Saving new drawing", { name });
@@ -135,20 +266,97 @@ browser.runtime.onMessage.addListener(
 
           const id = `drawing:${RandomUtils.generateRandomId()}`;
 
-          // This workaround is to pass params to script, it's ugly but it works
-          await browser.scripting.executeScript({
-            target: { tabId: activeTab.id },
-            func: (id, name, setCurrent) => {
-              window.__SCRIPT_PARAMS__ = { id, name, setCurrent };
-            },
-            args: [id, name, setCurrent],
+          await runActionScript("save-new-drawing", activeTab.id, {
+            id,
+            name,
+            setCurrent,
           });
 
-          await browser.scripting.executeScript({
-            target: { tabId: activeTab.id },
-            files: ["./js/execute-scripts/sendDrawingDataToSave.bundle.js"],
-          });
           break;
+
+        case MessageType.LOGIN_RESULT:
+          XLogger.log("Login result", message.payload);
+
+          if (message.payload.success) {
+            if (
+              !message.payload.details.grantedScopes.includes(
+                "https://www.googleapis.com/auth/drive.file"
+              )
+            ) {
+              XLogger.error(
+                "Invalid scopes",
+                message.payload.details.grantedScopes
+              );
+
+              await (browser.identity as any).clearAllCachedAuthTokens();
+              return;
+            }
+
+            // Clear the cloud folder id if exists to force check for folder
+            await browser.storage.local.set({
+              cloudFolderId: undefined,
+            });
+
+            const filesFromCloud = await GoogleDriveApi.getAllFiles();
+
+            XLogger.debug("Files from cloud", filesFromCloud);
+
+            for (const file of filesFromCloud) {
+              try {
+                XLogger.debug("Checking file", file);
+                const drawing: IDrawing = (
+                  await browser.storage.local.get(file.properties.excalisaveId)
+                )[file.properties.excalisaveId];
+
+                if (!drawing) {
+                  // No drawing then download the save locally
+                  XLogger.debug(
+                    "No drawing found, downloading file...",
+                    file.id
+                  );
+                  const fileContent = await GoogleDriveApi.getFile(file.id);
+
+                  const newDrawing: IDrawing = {
+                    id: file.properties.excalisaveId,
+                    name: file.name.split(".excalidraw")[0],
+                    createdAt: fileContent.excalisave.createdAt,
+                    imageBase64: fileContent.excalisave.imageBase64,
+                    viewBackgroundColor:
+                      fileContent.appState.viewBackgroundColor || "#ffffff",
+                    hash: file.properties.hash,
+                    lastSync: file.modifiedTime,
+                    lastModified: file.modifiedTime,
+                    data: {
+                      excalidraw: JSON.stringify(fileContent.elements),
+                      excalidrawState: JSON.stringify(fileContent.appState),
+                      versionFiles: Date.now().toString(),
+                      versionDataState: Date.now().toString(),
+                    },
+                  };
+
+                  await browser.storage.local.set({
+                    [file.properties.excalisaveId]: newDrawing,
+                  });
+                } else {
+                  if (drawing.hash && file.properties.hash === drawing.hash) {
+                    // No changes, just update the last modified date
+                    await browser.storage.local.set({
+                      [file.properties.excalisaveId]: {
+                        ...drawing,
+                        lastSync: file.modifiedTime,
+                        lastModified: file.modifiedTime,
+                      } as IDrawing,
+                    });
+                  }
+                }
+              } catch (error) {
+                XLogger.error("Error syncing file", file.id, file.name);
+                XLogger.error(error);
+              }
+            }
+          }
+          break;
+
         default:
           break;
       }
