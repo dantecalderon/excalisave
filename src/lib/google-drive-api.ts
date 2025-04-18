@@ -28,7 +28,20 @@ async function handleApiError(
 
   const errorJson: GoogleApiErrorResponse = await response.json();
 
-  logger.error("Error in JSON", errorJson);
+  logger.error("File not found in Drive", errorJson);
+
+  if (
+    errorJson?.error?.errors?.[0]?.location === "fileId" &&
+    errorJson?.error?.errors?.[0]?.reason === "notFound"
+  ) {
+    // Temporary solution to fix in case folder not found. (It will require to manually retry)
+    logger.info(
+      "Folder not found, delete cached Id. So it will try to find or create it next time."
+    );
+    await browser.storage.local.remove("cloudFolderId");
+
+    throw new Error("Folder not found");
+  }
 
   if ([401, 403].includes(errorJson?.error?.code)) {
     await (browser.identity as any).clearAllCachedAuthTokens();
@@ -71,9 +84,9 @@ export class GoogleDriveApi {
     name: string,
     metadata: GoogleFileMetadataProperties
   ): Promise<CloudFileId> {
-    logger.info("Creating new file in Drive", { name, metadata });
-
     const folderId = await GoogleDriveApi.getOrCreateFolderId();
+
+    logger.info("Creating new file in Drive", { name, metadata, folderId });
 
     const token = await GoogleDriveApi.getToken();
 
@@ -182,11 +195,6 @@ export class GoogleDriveApi {
           Authorization: "Bearer " + token,
         },
       }
-    );
-
-    await handleApiError(
-      response,
-      `Error fetching folderId by name ${folderName}`
     );
 
     const responseJson: GoogleDriveFilesMetadataResponse =

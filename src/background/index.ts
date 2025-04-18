@@ -366,6 +366,37 @@ browser.runtime.onMessage.addListener(
                 logger.error(error);
               }
             }
+
+            const cloudFileIds = new Set(filesFromCloud.map((file) => file.id));
+
+            // Remove lastSync from drawings that are not in the cloud to detect changes.
+            // We do this in Lougout(on click button), but noticed after some time the user is logged out from the browser
+            const localDrawings: IDrawing[] = Object.values(
+              await browser.storage.local.get()
+            )
+              .filter((o) => o?.id?.startsWith?.("drawing:"))
+              .filter((o) => !cloudFileIds.has(o.id));
+
+            for (const drawing of localDrawings) {
+              logger.debug(
+                "Drawing not in cloud",
+                drawing.id,
+                cloudFileIds.has(drawing.id)
+              );
+
+              if (!cloudFileIds.has(drawing.id)) {
+                logger.debug(
+                  "Drawing not in cloud, removing lastSync",
+                  drawing.id
+                );
+                await browser.storage.local.set({
+                  [drawing.id]: {
+                    ...drawing,
+                    lastSync: undefined,
+                  },
+                });
+              }
+            }
           }
 
           break;
