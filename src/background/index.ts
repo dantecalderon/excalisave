@@ -367,7 +367,9 @@ browser.runtime.onMessage.addListener(
               }
             }
 
-            const cloudFileIds = new Set(filesFromCloud.map((file) => file.id));
+            const cloudFileIds = new Set(
+              filesFromCloud.map((file) => file.properties.excalisaveId)
+            );
 
             // Remove lastSync from drawings that are not in the cloud to detect changes.
             // We do this in Lougout(on click button), but noticed after some time the user is logged out from the browser
@@ -375,7 +377,7 @@ browser.runtime.onMessage.addListener(
               await browser.storage.local.get()
             )
               .filter((o) => o?.id?.startsWith?.("drawing:"))
-              .filter((o) => !cloudFileIds.has(o.id));
+              .filter((o) => !cloudFileIds.has(o.id) && o.lastSync);
 
             for (const drawing of localDrawings) {
               logger.debug(
