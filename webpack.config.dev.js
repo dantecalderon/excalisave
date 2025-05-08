@@ -23,12 +23,13 @@ const extensionReloaderPlugin = new ExtensionReloader({
   reloadPage: true,
   entries: {
     contentScript: [
-      "execute-scripts/sendDrawingDataToSave",
-      "execute-scripts/loadDrawing",
-      "execute-scripts/newDrawing",
-      "execute-scripts/export-store",
-      "execute-scripts/load-store",
-      "execute-scripts/delete-unused-files",
+      "action-scripts/save-new-drawing",
+      "action-scripts/update-current-drawing",
+      "action-scripts/switch-drawing",
+      "action-scripts/new-empty-drawing",
+      "action-scripts/send-stored-files",
+      "action-scripts/add-files-to-store",
+      "action-scripts/delete-unused-files-from-store",
       "content-scripts/listenDrawingUpdates",
       "content-scripts/addOverwriteAction",
     ],
@@ -36,7 +37,7 @@ const extensionReloaderPlugin = new ExtensionReloader({
     extensionPage: [
       "popup",
       "options",
-      "execute-scripts/sendDrawingDataToSave",
+      "action-scripts/save-new-drawing",
       "content-scripts/listenDrawingUpdates",
       "content-scripts/addOverwriteAction",
     ],
@@ -58,35 +59,40 @@ module.exports = {
   entry: {
     manifest: path.join(sourcePath, "manifest.json"),
     background: path.join(sourcePath, "background", "index.ts"),
-    "execute-scripts/sendDrawingDataToSave": path.join(
+    "action-scripts/save-new-drawing": path.join(
       sourcePath,
-      "execute-scripts",
-      "send-drawing-data-to-save.ts"
+      "action-scripts",
+      "save-new-drawing.ts"
     ),
-    "execute-scripts/loadDrawing": path.join(
+    "action-scripts/update-current-drawing": path.join(
       sourcePath,
-      "execute-scripts",
-      "loadDrawing.ts"
+      "action-scripts",
+      "update-current-drawing.ts"
     ),
-    "execute-scripts/newDrawing": path.join(
+    "action-scripts/switch-drawing": path.join(
       sourcePath,
-      "execute-scripts",
-      "newDrawing.ts"
+      "action-scripts",
+      "switch-drawing.ts"
     ),
-    "execute-scripts/export-store": path.join(
+    "action-scripts/new-empty-drawing": path.join(
       sourcePath,
-      "execute-scripts",
-      "export-store.ts"
+      "action-scripts",
+      "new-empty-drawing.ts"
     ),
-    "execute-scripts/delete-unused-files": path.join(
+    "action-scripts/send-stored-files": path.join(
       sourcePath,
-      "execute-scripts",
-      "delete-unused-files.ts"
+      "action-scripts",
+      "send-stored-files.ts"
     ),
-    "execute-scripts/load-store": path.join(
+    "action-scripts/delete-unused-files-from-store": path.join(
       sourcePath,
-      "execute-scripts",
-      "load-store.ts"
+      "action-scripts",
+      "delete-unused-files-from-store.ts"
+    ),
+    "action-scripts/add-files-to-store": path.join(
+      sourcePath,
+      "action-scripts",
+      "add-files-to-store.ts"
     ),
     "content-scripts/listenDrawingUpdates": path.join(
       sourcePath,
@@ -113,6 +119,8 @@ module.exports = {
       "webextension-polyfill-ts": path.resolve(
         path.join(__dirname, "node_modules", "webextension-polyfill-ts")
       ),
+      "react/jsx-dev-runtime": "react/jsx-dev-runtime.js",
+      "react/jsx-runtime": "react/jsx-runtime.js"
     },
   },
 

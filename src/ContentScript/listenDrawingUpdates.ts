@@ -1,5 +1,6 @@
 import { MessageType, SaveDrawingMessage } from "../constants/message.types";
 import { DRAWING_ID_KEY_LS } from "../lib/constants";
+import { DrawingStore } from "../lib/drawing-store";
 import { XLogger } from "../lib/logger";
 import { As } from "../lib/types.utils";
 import { getDrawingDataState } from "./content-script.utils";
@@ -34,17 +35,17 @@ let prevVersionFiles = localStorage.getItem("version-files");
 timeoutId = window.setTimeout(() => {
   intervalId = window.setInterval(async () => {
     const currentVersionFiles = localStorage.getItem("version-files");
-
     const currentId = localStorage.getItem(DRAWING_ID_KEY_LS);
     if (currentId && prevVersionFiles !== currentVersionFiles) {
       prevVersionFiles = currentVersionFiles;
 
-      const drawingDataState = await getDrawingDataState();
-
       try {
+        const drawingDataState = await getDrawingDataState();
+
+        XLogger.debug("Sending drawing data to save (if changed).");
         await browser.runtime.sendMessage(
           As<SaveDrawingMessage>({
-            type: MessageType.SAVE_DRAWING,
+            type: MessageType.UPDATE_DRAWING,
             payload: {
               id: currentId,
               excalidraw: drawingDataState.excalidraw,
@@ -58,7 +59,7 @@ timeoutId = window.setTimeout(() => {
         );
       } catch (error) {
         XLogger.error(
-          "[Listen Changes] Error sending drawing data to save",
+          "[Listen Changes] Error sending drawing data to save(if changed)",
           error
         );
       }
