@@ -4,6 +4,7 @@ import { DrawingTitle } from "./components/DrawingTitle/DrawingTitle.component";
 
 type MountOptions = {
   useShadow?: boolean;
+  appendChild?: boolean;
 };
 
 export function mountReactComponent(
@@ -11,7 +12,7 @@ export function mountReactComponent(
   target: HTMLElement,
   options: MountOptions = {}
 ) {
-  const { useShadow = true } = options;
+  const { useShadow = true, appendChild = false } = options;
 
   let mountPoint: HTMLElement;
 
@@ -19,6 +20,10 @@ export function mountReactComponent(
     const shadow = target.attachShadow({ mode: "open" });
     mountPoint = document.createElement("div");
     shadow.appendChild(mountPoint);
+  } else if (appendChild) {
+    // Create a wrapper element and append it as a child
+    mountPoint = document.createElement("div");
+    target.appendChild(mountPoint);
   } else {
     mountPoint = target;
   }
@@ -34,10 +39,11 @@ export function mountReactComponent(
 
 export function initExcalidrawClientUI() {
   const appMenuTopLeft = document.getElementsByClassName("App-menu_top__left");
-  console.log("AppEMenuToplei", appMenuTopLeft);
+  console.log("AppEMenuTopleito223", appMenuTopLeft);
   if (appMenuTopLeft.length !== 1) return;
 
-  // mountReactComponent(<DrawingTitle />, appMenuTopLeft[0] as HTMLElement, {
-  //   useShadow: false,
-  // });
+  mountReactComponent(<DrawingTitle />, appMenuTopLeft[0] as HTMLElement, {
+    useShadow: false,
+    appendChild: true,
+  });
 }
