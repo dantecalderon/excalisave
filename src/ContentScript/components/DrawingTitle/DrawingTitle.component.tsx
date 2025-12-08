@@ -1,17 +1,28 @@
-import React from "react";
-import { Heading } from "@radix-ui/themes";
+import React, { useState } from "react";
 import "./DrawingTitle.styles.scss";
+import { XLogger } from "../../../lib/logger";
 
 export function DrawingTitle() {
+  const [title] = useState(() => {
+    try {
+      const drawingTitle = localStorage.getItem("__drawing_title");
+      return drawingTitle || "";
+    } catch (error) {
+      XLogger.error("Error getting drawing title", error);
+      return "";
+    }
+  });
+
   return (
-    <div
-      className="Excalidraw__title"
-      style={{
-        position: "absolute",
-        left: "100px",
-      }}
-    >
-      <Heading size="1">Nombre del Drawing2222</Heading>
-    </div>
+    <>
+      <h1
+        style={{
+          margin: "0",
+          fontSize: "1.15rem",
+        }}
+      >
+        {title}
+      </h1>
+    </>
   );
 }

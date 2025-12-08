@@ -5,7 +5,7 @@ import {
 import { MessageType, SaveDrawingMessage } from "../constants/message.types";
 import { IDrawing } from "../interfaces/drawing.interface";
 import { createStore, entries, set, values } from "idb-keyval";
-import { DRAWING_ID_KEY_LS } from "../lib/constants";
+import { DRAWING_ID_KEY_LS, DRAWING_TITLE_KEY_LS } from "../lib/constants";
 import { XLogger } from "../lib/logger";
 import { As } from "../lib/types.utils";
 import { FileId } from "@excalidraw/excalidraw/types/element/types";
@@ -93,6 +93,7 @@ type ScriptParams = {
     localStorage.setItem("version-files", versionFiles);
     localStorage.setItem("version-dataState", versionDataState);
     localStorage.setItem(DRAWING_ID_KEY_LS, loadDrawingId);
+    localStorage.setItem(DRAWING_TITLE_KEY_LS, drawingData.name);
   });
 
   // Reload page in origin url to ensure load localStorage data.
