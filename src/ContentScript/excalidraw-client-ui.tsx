@@ -23,6 +23,7 @@ export function mountReactComponent(
   } else if (appendChild) {
     // Create a wrapper element and append it as a child
     mountPoint = document.createElement("div");
+    mountPoint.className = "Excalidraw__title-container";
     target.appendChild(mountPoint);
   } else {
     mountPoint = target;
@@ -38,9 +39,11 @@ export function mountReactComponent(
 }
 
 export function initExcalidrawClientUI() {
-  const appMenuTopLeft = document.getElementsByClassName("App-menu_top__left");
-  console.log("AppEMenuTopleito223", appMenuTopLeft);
-  if (appMenuTopLeft.length !== 1) return;
+  const appMenuTopLeft = document.getElementsByClassName(
+    "excalidraw-container"
+  );
+  console.log("AppEMenuTop333ss33e3333333", appMenuTopLeft);
+  if (!appMenuTopLeft.length) return;
 
   mountReactComponent(<DrawingTitle />, appMenuTopLeft[0] as HTMLElement, {
     useShadow: false,
