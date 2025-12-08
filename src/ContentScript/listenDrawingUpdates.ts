@@ -3,6 +3,7 @@ import { DRAWING_ID_KEY_LS } from "../lib/constants";
 import { XLogger } from "../lib/logger";
 import { As } from "../lib/types.utils";
 import { getDrawingDataState } from "./content-script.utils";
+import { initExcalidrawClientUI } from "./excalidraw-client-ui";
 const { browser } = require("webextension-polyfill-ts");
 
 // ----------- Content Script Cleanup --------------------
@@ -79,3 +80,5 @@ window.addEventListener("beforeunload", () => {
     clearTimeout(timeoutId);
   } catch {}
 });
+
+initExcalidrawClientUI();
