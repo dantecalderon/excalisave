@@ -1,4 +1,4 @@
-import { BinaryFileData } from "@excalidraw/excalidraw/types/types";
+import { BinaryFileData } from "@excalidraw/excalidraw/dist/types/excalidraw/types";
 import { createStore, values } from "idb-keyval";
 import { ExportStoreMessage, MessageType } from "../constants/message.types";
 import { keyBy } from "../lib/utils/array.utils";
