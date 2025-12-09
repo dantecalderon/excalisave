@@ -154,7 +154,7 @@ export class DrawingStore {
       }
 
       return hasUnsaved;
-    } catch { }
+    } catch {}
 
     // By default, show confirmation dialog, we ensure the action is approved.
     return true;
