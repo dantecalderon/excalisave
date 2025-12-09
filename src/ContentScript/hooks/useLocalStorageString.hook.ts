@@ -13,7 +13,7 @@ export function useLocalStorageString(
   });
 
   useEffect(() => {
-    // Handler for custom events (same-tab changes)
+    // Handle changes in the same tab
     const handleCustomStorageChange = (e: Event) => {
       const customEvent = e as CustomEvent<{
         key: string;
