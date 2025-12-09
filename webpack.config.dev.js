@@ -108,6 +108,7 @@ module.exports = {
   },
 
   resolve: {
+    fullySpecified: false,
     extensions: [".ts", ".tsx", ".js", ".json"],
     alias: {
       "webextension-polyfill-ts": path.resolve(
