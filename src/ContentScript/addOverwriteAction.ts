@@ -1,5 +1,4 @@
 import { browser } from "webextension-polyfill-ts";
-import { DrawingStore } from "../lib/drawing-store";
 import { XLogger } from "../lib/logger";
 
 const addOverwriteAction = () => {

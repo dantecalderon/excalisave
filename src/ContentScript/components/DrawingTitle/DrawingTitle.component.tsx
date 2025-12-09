@@ -2,6 +2,7 @@ import React from "react";
 import "./DrawingTitle.styles.scss";
 import { useLocalStorageString } from "../../hooks/useLocalStorageString.hook";
 import { DRAWING_TITLE_KEY_LS } from "../../../lib/constants";
+import { browser } from "webextension-polyfill-ts";
 
 export function DrawingTitle() {
   const title = useLocalStorageString(DRAWING_TITLE_KEY_LS, "");
@@ -12,10 +13,24 @@ export function DrawingTitle() {
         style={{
           margin: "0",
           fontSize: "1.15rem",
+          userSelect: "text",
         }}
       >
         {title}
       </h1>
+      <button
+        className="excalidraw-button collab-button excalisave-button"
+        style={{
+          width: "auto",
+          marginLeft: "8px",
+        }}
+        title="Open Excalisave"
+        onClick={() => {
+          browser.runtime.sendMessage({ type: "OpenPopup" });
+        }}
+      >
+        Excalisave
+      </button>
     </>
   );
 }
