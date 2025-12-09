@@ -26,6 +26,7 @@ import { NavBar } from "../components/NavBar/Navbar.component";
 import { Placeholder } from "../components/Placeholder/Placeholder.component";
 import { Sidebar } from "../components/Sidebar/Sidebar.component";
 import { IDrawing } from "../interfaces/drawing.interface";
+import { DRAWING_TITLE_KEY_LS } from "../lib/constants";
 import { DrawingStore } from "../lib/drawing-store";
 import { XLogger } from "../lib/logger";
 import { TabUtils } from "../lib/utils/tab.utils";
@@ -222,6 +223,29 @@ const Popup: React.FC = () => {
           name: newName,
         },
       });
+
+      // If this is the current drawing, update localStorage in the Excalidraw tab
+      if (currentDrawingId === id && inExcalidrawPage) {
+        try {
+          const activeTab = await TabUtils.getActiveTab();
+          if (activeTab) {
+            await browser.scripting.executeScript({
+              target: { tabId: activeTab.id },
+              func: (titleKey, newTitle) => {
+                localStorage.setItem(titleKey, newTitle);
+                window.dispatchEvent(
+                  new CustomEvent("localStorageChange", {
+                    detail: { key: titleKey, value: newTitle },
+                  })
+                );
+              },
+              args: [DRAWING_TITLE_KEY_LS, newName],
+            });
+          }
+        } catch (error) {
+          XLogger.error("Error updating drawing title in localStorage", error);
+        }
+      }
 
       // Sync the drawing to the cloud
       await browser.runtime.sendMessage({
