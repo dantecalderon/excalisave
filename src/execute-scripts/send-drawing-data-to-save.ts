@@ -8,6 +8,7 @@ import {
   SaveNewDrawingMessage,
 } from "../constants/message.types";
 import { DRAWING_ID_KEY_LS, DRAWING_TITLE_KEY_LS } from "../lib/constants";
+import { setLocalStorageItemAndNotify } from "../lib/localStorage.utils";
 const { browser } = require("webextension-polyfill-ts");
 
 type ScriptParams = {
@@ -56,7 +57,7 @@ type ScriptParams = {
   } as SaveDrawingMessage | SaveNewDrawingMessage);
 
   if (setCurrent && saveAsNew) {
-    localStorage.setItem(DRAWING_ID_KEY_LS, drawingId);
-    localStorage.setItem(DRAWING_TITLE_KEY_LS, params.name);
+    setLocalStorageItemAndNotify(DRAWING_ID_KEY_LS, drawingId);
+    setLocalStorageItemAndNotify(DRAWING_TITLE_KEY_LS, params.name);
   }
 })();

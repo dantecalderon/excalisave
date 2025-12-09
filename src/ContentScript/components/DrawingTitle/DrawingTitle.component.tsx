@@ -1,17 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import "./DrawingTitle.styles.scss";
-import { XLogger } from "../../../lib/logger";
+import { useLocalStorageString } from "../../hooks/useLocalStorageString.hook";
+import { DRAWING_TITLE_KEY_LS } from "../../../lib/constants";
 
 export function DrawingTitle() {
-  const [title] = useState(() => {
-    try {
-      const drawingTitle = localStorage.getItem("__drawing_title");
-      return drawingTitle || "";
-    } catch (error) {
-      XLogger.error("Error getting drawing title", error);
-      return "";
-    }
-  });
+  const title = useLocalStorageString(DRAWING_TITLE_KEY_LS, "");
 
   return (
     <>
