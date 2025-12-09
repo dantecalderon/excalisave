@@ -17,32 +17,26 @@
     "scripting",
     "unlimitedStorage"
   ],
-
   "__chrome|firefox__author": "atharvakadlag",
   "__opera__developer": {
     "name": "atharvakadlag"
   },
-
   "__firefox|prod__browser_specific_settings": {
     "gecko": {
       "id": "excalisave@atharvakadlag.github.io"
     }
   },
-
   "__chrome__minimum_chrome_version": "88",
   "__opera__minimum_opera_version": "36",
-
   "action": {
     "default_title": "Excalisave",
     "default_popup": "popup.html"
   },
-
   "__chrome|opera__options_page": "options.html",
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
   },
-
   "commands": {
     "_execute_action": {
       "suggested_key": {
@@ -51,35 +45,43 @@
       }
     }
   },
-
   "__chrome|opera__background": {
     "service_worker": "js/background.bundle.js"
   },
-
   "__firefox__background": {
-    "scripts": ["js/background.bundle.js"]
+    "scripts": [
+      "js/background.bundle.js"
+    ]
   },
-
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
-      "matches": ["https://excalidraw.com/*"]
+      "resources": [
+        "assets/*"
+      ],
+      "matches": [
+        "https://excalidraw.com/*"
+      ]
     }
   ],
-  "host_permissions": ["https://excalidraw.com/*"],
+  "host_permissions": [
+    "https://excalidraw.com/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://excalidraw.com/*"],
+      "matches": [
+        "https://excalidraw.com/*"
+      ],
       "js": [
-        "libs/react.production.min.js",
-        "libs/react-dom.production.min.js",
-        "libs/excalidraw.production.min.js",
         "js/content-scripts/listenDrawingUpdates.bundle.js"
       ]
     },
     {
-      "matches": ["https://excalidraw.com/*"],
-      "js": ["js/content-scripts/addOverwriteAction.bundle.js"],
+      "matches": [
+        "https://excalidraw.com/*"
+      ],
+      "js": [
+        "js/content-scripts/addOverwriteAction.bundle.js"
+      ],
       "run_at": "document_idle"
     }
   ]
