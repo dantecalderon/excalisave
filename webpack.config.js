@@ -201,26 +201,6 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         { from: "src/assets", to: "assets" },
-        { from: "src/external-libs/excalidraw.production.min.js", to: "libs" },
-        { from: "node_modules/react/umd/react.production.min.js", to: "libs" },
-        {
-          from: "node_modules/react-dom/umd/react-dom.production.min.js",
-          to: "libs",
-        },
-        {
-          from: "node_modules/react-dom/umd/react-dom.production.min.js",
-          to: "libs",
-        },
-        {
-          from: "node_modules/@excalidraw/excalidraw/dist/excalidraw-assets/",
-          globOptions: {
-            dot: true,
-            // The built lib external-libs/exccalidraw.production.js is one single file, no need to copy chunks.
-            ignore: ["**/vendor-*.js*", "**/locales/**"],
-          },
-          to: "assets/excalidraw-assets",
-          toType: "dir",
-        },
       ],
     }),
   ],
