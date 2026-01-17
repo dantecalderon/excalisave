@@ -1,0 +1,9 @@
+.Excalidraw__title-container {
+  position: absolute;
+  top: var(--editor-container-padding);
+  left: 68px;
+  z-index: 3 !important;
+  height: 40px;
+  display: flex;
+  align-items: center;
+}

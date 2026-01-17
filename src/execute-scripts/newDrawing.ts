@@ -1,6 +1,6 @@
 import { getDrawingDataState } from "../ContentScript/content-script.utils";
 import { MessageType, SaveDrawingMessage } from "../constants/message.types";
-import { DRAWING_ID_KEY_LS } from "../lib/constants";
+import { DRAWING_ID_KEY_LS, DRAWING_TITLE_KEY_LS } from "../lib/constants";
 import { XLogger } from "../lib/logger";
 import { As } from "../lib/types.utils";
 const { browser } = require("webextension-polyfill-ts");
@@ -27,6 +27,7 @@ const { browser } = require("webextension-polyfill-ts");
     );
 
     localStorage.removeItem(DRAWING_ID_KEY_LS);
+    localStorage.removeItem(DRAWING_TITLE_KEY_LS);
   }
 
   async function clearByExcalidrawFromUI() {
