@@ -13,6 +13,7 @@ import { browser } from "webextension-polyfill-ts";
 import { ImpExp } from "../components/ImpExp/ImpExp.component";
 import SyncSettings from "../components/sync/SyncSettings";
 import "./Options.styles.scss";
+import { CustomDomainsSettings } from "../components/CustomDomain/CustomDomainSettings.component";
 
 export const Options: React.FC = () => {
   const [showSyncSettings, setShowSyncSettings] = useState(false);
@@ -84,6 +85,7 @@ export const Options: React.FC = () => {
             >
               Configure Sync Settings
             </Button>
+            <CustomDomainsSettings />
           </Box>
         </Container>
       </Box>

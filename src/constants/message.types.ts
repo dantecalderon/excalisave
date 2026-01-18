@@ -15,6 +15,9 @@ export enum MessageType {
   SYNC_DRAWING = "SYNC_DRAWING",
   DELETE_DRAWING_SYNC = "DELETE_DRAWING_SYNC",
   CONFIGURE_GITHUB_PROVIDER = "CONFIGURE_GITHUB_PROVIDER",
+  ADD_CUSTOM_DOMAIN = "ADD_CUSTOM_DOMAIN",
+  REMOVE_CUSTOM_DOMAIN = "REMOVE_CUSTOM_DOMAIN",
+  GET_CUSTOM_DOMAINS = "GET_CUSTOM_DOMAINS",
 }
 
 export type SaveNewDrawingMessage = {
@@ -107,4 +110,22 @@ export type ConfigureGithubProviderMessage = {
     repoName: string;
     drawingsToSync: string[];
   };
+};
+
+export type AddCustomDomainMessage = {
+  type: MessageType.ADD_CUSTOM_DOMAIN;
+  payload: {
+    origin: string;
+  };
+};
+
+export type RemoveCustomDomainMessage = {
+  type: MessageType.REMOVE_CUSTOM_DOMAIN;
+  payload: {
+    origin: string;
+  };
+};
+
+export type GetCustomDomainsMessage = {
+  type: MessageType.GET_CUSTOM_DOMAINS;
 };

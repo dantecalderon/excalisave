@@ -1,10 +1,13 @@
 import { browser } from "webextension-polyfill-ts";
 import {
+  AddCustomDomainMessage,
   CleanupFilesMessage,
   ConfigureGithubProviderMessage,
   DeleteDrawingMessage,
   GetChangeHistoryMessage,
+  GetCustomDomainsMessage,
   MessageType,
+  RemoveCustomDomainMessage,
   SaveDrawingMessage,
   SaveNewDrawingMessage,
 } from "../constants/message.types";
@@ -14,6 +17,11 @@ import { TabUtils } from "../lib/utils/tab.utils";
 import { RandomUtils } from "../lib/utils/random.utils";
 import { SyncService } from "../services/sync.service";
 import { GitHubConfigService } from "../services/github/github-config.service";
+import {
+  CUSTOM_DOMAINS_KEY,
+  getCustomDomains,
+  registerContentScriptForCustomDomains,
+} from "./custom-domains.utils";
 
 // Initialize services
 const syncService = SyncService.getInstance();
@@ -30,8 +38,21 @@ browser.runtime.onInstalled.addListener(async () => {
       });
     }
   }
+
+  XLogger.debug(
+    "[Installed] Registering content scripts for custom domains..."
+  );
+  const domains = await getCustomDomains();
+  await registerContentScriptForCustomDomains(domains);
+  XLogger.debug("[Installed] ✅ Content scripts for custom domains registered");
 });
 
+browser.runtime.onStartup.addListener(async () => {
+  XLogger.debug("[Startup] Registering content scripts for custom domains...");
+  const domains = await getCustomDomains();
+  await registerContentScriptForCustomDomains(domains);
+  XLogger.debug("[Startup] ✅ Content scripts for custom domains registered");
+});
 browser.runtime.onMessage.addListener(
   async (
     message:
@@ -41,6 +62,9 @@ browser.runtime.onMessage.addListener(
       | DeleteDrawingMessage
       | GetChangeHistoryMessage
       | ConfigureGithubProviderMessage
+      | AddCustomDomainMessage
+      | RemoveCustomDomainMessage
+      | GetCustomDomainsMessage
       | any,
     _sender: any
   ) => {
@@ -231,6 +255,52 @@ browser.runtime.onMessage.addListener(
             success: true,
             commits: changeHistory,
           };
+
+        case MessageType.ADD_CUSTOM_DOMAIN:
+          const { origin } = message.payload;
+
+          const granted = await browser.permissions.request({
+            origins: [`${origin}/*`],
+          });
+
+          if (!granted) {
+            return { success: false, error: "Permission denied" };
+          }
+
+          const currentDomains = await getCustomDomains();
+
+          const newDomains = [...currentDomains, { origin, enabled: true }];
+          await browser.storage.local.set({
+            [CUSTOM_DOMAINS_KEY]: newDomains,
+          });
+
+          await registerContentScriptForCustomDomains(newDomains);
+
+          return { success: true };
+
+        case MessageType.REMOVE_CUSTOM_DOMAIN:
+          const domainToRemove = message.payload.origin;
+
+          const existingDomains = await getCustomDomains();
+
+          const filteredDomains = existingDomains.filter(
+            (domain) => domain.origin !== domainToRemove
+          );
+
+          await browser.storage.local.set({
+            [CUSTOM_DOMAINS_KEY]: filteredDomains,
+          });
+
+          await registerContentScriptForCustomDomains(filteredDomains);
+
+          await browser.permissions.remove({
+            origins: [`${domainToRemove}/*`],
+          });
+
+          return { success: true };
+
+        case MessageType.GET_CUSTOM_DOMAINS:
+          return { success: true, domains: await getCustomDomains() };
 
         default:
           return { success: false, error: "Unknown message type" };
