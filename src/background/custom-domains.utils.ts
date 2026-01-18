@@ -12,17 +12,17 @@ export async function getCustomDomains(): Promise<CustomDomain[]> {
 export async function registerContentScriptForCustomDomains(
   domains: CustomDomain[]
 ) {
-  const enabledDomains = domains.filter((domain) => domain.enabled);
-
-  if (enabledDomains.length === 0) return;
-
-  const matches = enabledDomains.map((domain) => `${domain.origin}/*`);
-
   try {
     await browser.scripting.unregisterContentScripts({
       ids: ["custom-domain-scripts", "custom-domain-overwrite"],
     });
   } catch {}
+
+  const enabledDomains = domains.filter((domain) => domain.enabled);
+
+  if (enabledDomains.length === 0) return;
+
+  const matches = enabledDomains.map((domain) => `${domain.origin}/*`);
 
   await browser.scripting.registerContentScripts([
     {

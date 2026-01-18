@@ -15,8 +15,7 @@ export class CustomDomainUtils {
     }
 
     const customDomains = await this.getCustomDomains();
-    console.log("customDomains", customDomains);
 
-    return customDomains.some((domain) => tab.url.includes(domain.origin));
+    return customDomains.some((domain) => tab.url?.includes(domain.origin));
   }
 }
