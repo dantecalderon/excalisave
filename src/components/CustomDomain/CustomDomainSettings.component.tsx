@@ -5,8 +5,8 @@ import {
   Flex,
   Heading,
   TextField,
-  IconButton,
   Callout,
+  Code,
 } from "@radix-ui/themes";
 import { InfoCircledIcon, TrashIcon } from "@radix-ui/react-icons";
 import React, { useState, useEffect } from "react";
@@ -59,6 +59,8 @@ export const CustomDomainsSettings: React.FC = () => {
       <Text size="2">
         Add self-hosted Excalidraw instances. Include the protocol (http or
         https).
+        <br /> Examples: <Code>https://excalidraw.company.com</Code> or{" "}
+        <Code>http://192.168.3.4:5999</Code>
       </Text>
       <Callout.Root mt="3" mb="3" color="orange">
         <Callout.Icon>
@@ -84,6 +86,13 @@ export const CustomDomainsSettings: React.FC = () => {
       </Flex>
 
       <Box mt="3">
+        {domains.length === 0 && (
+          <Box mt="5" style={{ display: "flex", justifyContent: "center" }}>
+            <Text size="2" color="gray" style={{ color: "var(--gray-10)" }}>
+              No domains added yet.
+            </Text>
+          </Box>
+        )}
         {domains.map((d) => (
           <Flex
             key={d.origin}
@@ -100,15 +109,15 @@ export const CustomDomainsSettings: React.FC = () => {
             <Text size="2" style={{ fontFamily: "monospace" }}>
               {d.origin}
             </Text>
-            <IconButton
+            <Button
               color="red"
-              variant="ghost"
-              size="2"
+              variant="soft"
+              size="1"
               onClick={() => removeDomain(d.origin)}
-              title="Remove domain"
             >
               <TrashIcon width="14" height="14" />
-            </IconButton>
+              Remove
+            </Button>
           </Flex>
         ))}
       </Box>
