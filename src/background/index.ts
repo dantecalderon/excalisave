@@ -276,6 +276,16 @@ browser.runtime.onMessage.addListener(
 
           await registerContentScriptForCustomDomains(newDomains);
 
+          // Reload any open tabs matching the new domain to inject content scripts
+          const tabsToInject = await browser.tabs.query({
+            url: `${origin}/*`,
+          });
+          for (const tab of tabsToInject) {
+            if (tab.id) {
+              browser.tabs.reload(tab.id);
+            }
+          }
+
           return { success: true };
 
         case MessageType.REMOVE_CUSTOM_DOMAIN:
@@ -296,6 +306,21 @@ browser.runtime.onMessage.addListener(
           await browser.permissions.remove({
             origins: [`${domainToRemove}/*`],
           });
+
+          console.log(
+            "Reloading tabs to remove content scripts and update listeners",
+            `${domainToRemove}/*`
+          );
+          // Reload removed tabs to remove content scripts and update listeners
+          const tabsToReload = await browser.tabs.query({
+            url: `${domainToRemove}/*`,
+          });
+          console.log("Tabs to reload", tabsToReload);
+          for (const tab of tabsToReload) {
+            if (tab.id) {
+              browser.tabs.reload(tab.id);
+            }
+          }
 
           return { success: true };
 

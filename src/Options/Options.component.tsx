@@ -37,7 +37,7 @@ export const Options: React.FC = () => {
           height: "100vh",
         }}
       >
-        <Container size="2">
+        <Container size="2" pb="8">
           <Flex gap="3" px="1" py="9" justify={"start"} align={"center"}>
             <Box>
               <Avatar
