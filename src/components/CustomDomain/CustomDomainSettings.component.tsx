@@ -6,11 +6,13 @@ import {
   Heading,
   TextField,
   IconButton,
+  Callout,
 } from "@radix-ui/themes";
-import { TrashIcon } from "@radix-ui/react-icons";
+import { InfoCircledIcon, TrashIcon } from "@radix-ui/react-icons";
 import React, { useState, useEffect } from "react";
 import { browser } from "webextension-polyfill-ts";
 import { CustomDomain } from "../../background/background.interfaces";
+import { MessageType } from "../../constants/message.types";
 
 export const CustomDomainsSettings: React.FC = () => {
   const [domains, setDomains] = useState<CustomDomain[]>([]);
@@ -18,7 +20,7 @@ export const CustomDomainsSettings: React.FC = () => {
 
   useEffect(() => {
     browser.runtime
-      .sendMessage({ type: "GET_CUSTOM_DOMAINS" })
+      .sendMessage({ type: MessageType.GET_CUSTOM_DOMAINS })
       .then((res) => setDomains(res.domains || []));
   }, []);
 
@@ -28,7 +30,7 @@ export const CustomDomainsSettings: React.FC = () => {
       const origin = url.origin;
 
       const result = await browser.runtime.sendMessage({
-        type: "ADD_CUSTOM_DOMAIN",
+        type: MessageType.ADD_CUSTOM_DOMAIN,
         payload: { origin },
       });
 
@@ -43,7 +45,7 @@ export const CustomDomainsSettings: React.FC = () => {
 
   const removeDomain = async (origin: string) => {
     await browser.runtime.sendMessage({
-      type: "REMOVE_CUSTOM_DOMAIN",
+      type: MessageType.REMOVE_CUSTOM_DOMAIN,
       payload: { origin },
     });
     setDomains(domains.filter((d) => d.origin !== origin));
@@ -54,13 +56,25 @@ export const CustomDomainsSettings: React.FC = () => {
       <Heading as="h3" size="5">
         Custom Excalidraw Domains
       </Heading>
-      <Text size="2">Add self-hosted Excalidraw instances</Text>
-
+      <Text size="2">
+        Add self-hosted Excalidraw instances. Include the protocol (http or
+        https).
+      </Text>
+      <Callout.Root mt="3" mb="3" color="orange">
+        <Callout.Icon>
+          <InfoCircledIcon />
+        </Callout.Icon>
+        <Text size="2">
+          Excalidraw stores images per domain. If you load a drawing on a
+          different domain than where it was saved, embedded images will not
+          appear.
+        </Text>
+      </Callout.Root>
       <Flex gap="2" mt="3">
         <Box style={{ maxWidth: "400px", width: "100%" }}>
           <TextField.Root style={{ width: "100%" }}>
             <TextField.Input
-              placeholder="https://excalidraw.mycompany.com"
+              placeholder="https://excalidraw.company.com"
               value={newDomain}
               onChange={(e) => setNewDomain(e.target.value)}
             />
