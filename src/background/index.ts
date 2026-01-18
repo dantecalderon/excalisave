@@ -307,15 +307,10 @@ browser.runtime.onMessage.addListener(
             origins: [`${domainToRemove}/*`],
           });
 
-          console.log(
-            "Reloading tabs to remove content scripts and update listeners",
-            `${domainToRemove}/*`
-          );
           // Reload removed tabs to remove content scripts and update listeners
           const tabsToReload = await browser.tabs.query({
             url: `${domainToRemove}/*`,
           });
-          console.log("Tabs to reload", tabsToReload);
           for (const tab of tabsToReload) {
             if (tab.id) {
               browser.tabs.reload(tab.id);
