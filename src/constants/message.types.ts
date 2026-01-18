@@ -18,6 +18,12 @@ export enum MessageType {
   ADD_CUSTOM_DOMAIN = "ADD_CUSTOM_DOMAIN",
   REMOVE_CUSTOM_DOMAIN = "REMOVE_CUSTOM_DOMAIN",
   GET_CUSTOM_DOMAINS = "GET_CUSTOM_DOMAINS",
+  OPEN_POPUP = "OpenPopup",
+  MESSAGE_AUTO_SAVE = "MessageAutoSave",
+  REMOVE_GITHUB_PROVIDER = "REMOVE_GITHUB_PROVIDER",
+  GET_GITHUB_CONFIG = "GET_GITHUB_CONFIG",
+  CHECK_GITHUB_AUTH = "CHECK_GITHUB_AUTH",
+  ERROR_LOADING_STORE = "ERROR_LOADING_STORE",
 }
 
 export type SaveNewDrawingMessage = {
@@ -79,6 +85,13 @@ export type DeleteDrawingSyncMessage = {
   };
 };
 
+export type SyncDrawingMessage = {
+  type: MessageType.SYNC_DRAWING;
+  payload: {
+    id: string;
+  };
+};
+
 export type GetChangeHistoryMessage = {
   type: MessageType.GET_CHANGE_HISTORY;
   payload: {
@@ -92,13 +105,6 @@ export type ShowMergeConflictMessage = {
     drawingId: string;
     localDrawing: IDrawing;
     remoteDrawing: IDrawing;
-  };
-};
-
-export type SyncDrawingMessage = {
-  type: MessageType.SYNC_DRAWING;
-  payload: {
-    id: string;
   };
 };
 
@@ -129,3 +135,45 @@ export type RemoveCustomDomainMessage = {
 export type GetCustomDomainsMessage = {
   type: MessageType.GET_CUSTOM_DOMAINS;
 };
+
+export type OpenPopupMessage = {
+  type: MessageType.OPEN_POPUP;
+};
+
+export type MessageAutoSaveMessage = {
+  type: MessageType.MESSAGE_AUTO_SAVE;
+  payload: {
+    name: string;
+    setCurrent: boolean;
+  };
+};
+
+export type RemoveGitHubProviderMessage = {
+  type: MessageType.REMOVE_GITHUB_PROVIDER;
+};
+
+export type GetGitHubConfigMessage = {
+  type: MessageType.GET_GITHUB_CONFIG;
+};
+
+export type CheckGitHubAuthMessage = {
+  type: MessageType.CHECK_GITHUB_AUTH;
+};
+
+export type BackgroundMessage =
+  | SaveDrawingMessage
+  | SaveNewDrawingMessage
+  | CleanupFilesMessage
+  | DeleteDrawingMessage
+  | DeleteDrawingSyncMessage
+  | GetChangeHistoryMessage
+  | ConfigureGithubProviderMessage
+  | AddCustomDomainMessage
+  | RemoveCustomDomainMessage
+  | GetCustomDomainsMessage
+  | OpenPopupMessage
+  | MessageAutoSaveMessage
+  | RemoveGitHubProviderMessage
+  | GetGitHubConfigMessage
+  | CheckGitHubAuthMessage
+  | SyncDrawingMessage;

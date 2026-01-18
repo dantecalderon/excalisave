@@ -1,22 +1,11 @@
 import { browser } from "webextension-polyfill-ts";
-import {
-  AddCustomDomainMessage,
-  CleanupFilesMessage,
-  ConfigureGithubProviderMessage,
-  DeleteDrawingMessage,
-  GetChangeHistoryMessage,
-  GetCustomDomainsMessage,
-  MessageType,
-  RemoveCustomDomainMessage,
-  SaveDrawingMessage,
-  SaveNewDrawingMessage,
-} from "../constants/message.types";
+import { BackgroundMessage, MessageType } from "../constants/message.types";
 import { IDrawing } from "../interfaces/drawing.interface";
 import { XLogger } from "../lib/logger";
-import { TabUtils } from "../lib/utils/tab.utils";
 import { RandomUtils } from "../lib/utils/random.utils";
-import { SyncService } from "../services/sync.service";
+import { TabUtils } from "../lib/utils/tab.utils";
 import { GitHubConfigService } from "../services/github/github-config.service";
+import { SyncService } from "../services/sync.service";
 import {
   CUSTOM_DOMAINS_KEY,
   getCustomDomains,
@@ -54,27 +43,14 @@ browser.runtime.onStartup.addListener(async () => {
   XLogger.debug("[Startup] ✅ Content scripts for custom domains registered");
 });
 browser.runtime.onMessage.addListener(
-  async (
-    message:
-      | SaveDrawingMessage
-      | SaveNewDrawingMessage
-      | CleanupFilesMessage
-      | DeleteDrawingMessage
-      | GetChangeHistoryMessage
-      | ConfigureGithubProviderMessage
-      | AddCustomDomainMessage
-      | RemoveCustomDomainMessage
-      | GetCustomDomainsMessage
-      | any,
-    _sender: any
-  ) => {
+  async (message: BackgroundMessage, _sender: any): Promise<any> => {
     try {
       XLogger.log("Message background", message);
       if (!message || !message.type)
         return { success: false, error: "Invalid message" };
 
       switch (message.type) {
-        case "OpenPopup":
+        case MessageType.OPEN_POPUP:
           browser.action.openPopup();
           break;
 
@@ -195,7 +171,7 @@ browser.runtime.onMessage.addListener(
 
           return { success: true };
 
-        case "MessageAutoSave":
+        case MessageType.MESSAGE_AUTO_SAVE:
           const name = message.payload.name;
           const setCurrent = message.payload.setCurrent;
           XLogger.log("Saving new drawing", { name });
@@ -234,17 +210,23 @@ browser.runtime.onMessage.addListener(
             message.payload.drawingsToSync
           );
 
-        case "REMOVE_GITHUB_PROVIDER":
+        case MessageType.REMOVE_GITHUB_PROVIDER:
           return await githubConfigService.removeGitHubProvider();
 
-        case "GET_GITHUB_CONFIG":
+        case MessageType.GET_GITHUB_CONFIG:
           return await githubConfigService.getGitHubConfig();
 
-        case "CHECK_GITHUB_AUTH":
+        case MessageType.CHECK_GITHUB_AUTH:
           return await githubConfigService.checkGitHubAuth();
 
         case MessageType.DELETE_DRAWING_SYNC:
-          return await syncService.deleteDrawing(message.payload.id);
+          const drawingToDeleteSync = (
+            await browser.storage.local.get(message.payload.id)
+          )[message.payload.id] as IDrawing;
+          if (drawingToDeleteSync) {
+            await syncService.deleteDrawing(drawingToDeleteSync);
+          }
+          return { success: true };
 
         case MessageType.GET_CHANGE_HISTORY:
           const changeHistory = await syncService.getChangeHistory(
