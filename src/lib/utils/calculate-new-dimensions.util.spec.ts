@@ -45,15 +45,15 @@ describe("calculateNewDimensions", () => {
     expect(calculateNewDimensions(10_000, 1)).toEqual({
       width: MAX_WIDTH_THUMBNAIL,
       height: 1,
-      scale: 1 / 40,
+      scale: 0.0375,
     });
   });
 
   it("Real example 1: It must fit the height", () => {
     expect(calculateNewDimensions(13734.345703125, 11249.04800415039)).toEqual({
-      width: 159,
+      width: 238,
       height: MAX_HEIGHT_THUMBNAIL,
-      scale: 0.011556533490837259,
+      scale: 0.017334800236255887,
     });
   });
 });
