@@ -1,4 +1,4 @@
-import { BinaryFiles } from "@excalidraw/excalidraw/types/types";
+import { BinaryFiles } from "@excalidraw/excalidraw/dist/types/excalidraw/types";
 import {
   DownloadIcon,
   InfoCircledIcon,

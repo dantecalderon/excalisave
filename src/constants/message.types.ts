@@ -1,4 +1,4 @@
-import { BinaryFileData } from "@excalidraw/excalidraw/types/types";
+import { BinaryFileData } from "@excalidraw/excalidraw/dist/types/excalidraw/types";
 import { DrawingDataState } from "../interfaces/drawing-data-state.interface";
 import { IDrawing } from "../interfaces/drawing.interface";
 

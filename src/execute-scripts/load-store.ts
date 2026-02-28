@@ -1,4 +1,4 @@
-import { BinaryFileData } from "@excalidraw/excalidraw/types/types";
+import { BinaryFileData } from "@excalidraw/excalidraw/dist/types/excalidraw/types";
 import { createStore, keys, set, update } from "idb-keyval";
 import { getScriptParams } from "../ContentScript/content-script.utils";
 import { XLogger } from "../lib/logger";
