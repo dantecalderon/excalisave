@@ -9,6 +9,7 @@ import type { ExcalidrawDataState } from "../interfaces/excalidraw-data-state.in
 import { XLogger } from "../lib/logger";
 import { convertBlobToBase64Async } from "../lib/utils/blob-to-base64.util";
 import { calculateNewDimensions } from "../lib/utils/calculate-new-dimensions.util";
+import { exportToBlob } from "@excalidraw/utils";
 
 // Were images are stored: https://github.com/excalidraw/excalidraw/blob/e8def8da8d5fcf9445aebdd996de3fee4cecf7ef/excalidraw-app/data/LocalData.ts#L24
 const filesStore = createStore("files-db", "files-store");
@@ -80,14 +81,21 @@ async function takeScreenshot({
     XLogger.warn("Error retrieving files from IndexedDB", error);
   }
 
-  const blob = await window.ExcalidrawLib.exportToBlob({
-    elements,
-    getDimensions: (width, height) => {
-      return calculateNewDimensions(width, height);
-    },
-    files,
-    appState,
-  });
+  let blob: Blob;
+  try {
+    blob = await exportToBlob({
+      elements,
+      getDimensions: (width, height) => {
+        return calculateNewDimensions(width, height);
+      },
+      files,
+      appState,
+    });
+  } catch (error) {
+    XLogger.warn("Error exporting to blob", error);
+
+    throw error;
+  }
 
   const imageBase64 = await convertBlobToBase64Async(blob);
 
